@@ -1,0 +1,182 @@
+﻿@page "/Modbus"
+@page "/"
+@using System.Net.Sockets
+@using NModbus
+
+
+<DxFormLayout>
+	<DxFormLayoutGroup>
+		<DxFormLayoutItem Caption="Update Time" ColSpanLg="3" BeginRow=true>
+			@if (lastUpdateTime != DateTime.MinValue)
+			{
+				<DxDateEdit @bind-Date="@lastUpdateTime" ReadOnly="true" Mask="yyyy/MM/dd hh:mm:ss"></DxDateEdit>
+			}
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="Function" ColSpanLg="3" BeginRow=true>
+			<DxComboBox Data="functionList" Value="targetFun" ValueChanged="((string s)=>{FunctionChanged(s);})" />
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="Start Address" ColSpanLg="2" BeginRow=true>
+			<DxSpinEdit @bind-Value=startAddress />
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="Offset" ColSpanLg="2" BeginRow=true>
+			<DxSpinEdit @bind-Value=offset/>
+		</DxFormLayoutItem>
+		@if (readOnly)
+		{
+			<DxFormLayoutItem Caption="Update Interval(ms)" ColSpanLg="3" BeginRow=true>
+				<DxSpinEdit @bind-Value="updateInterval"></DxSpinEdit>
+			</DxFormLayoutItem>
+		}
+		<DxFormLayoutItem ColSpanLg="2" BeginRow=true>
+			<DxButton Text="Action" Click="ModbusAction" />
+		</DxFormLayoutItem>
+	</DxFormLayoutGroup>
+</DxFormLayout>
+
+<ModbusClient ContentList="@dynamicList" StartAddress="@startAddress" CurrentType="@currentType" ReadOnly="@readOnly" ECModifyModbus="GetNewModbusValue" />
+
+@code
+{
+	private TcpClient client;
+	private ModbusFactory factory = new ModbusFactory();
+	private IModbusMaster master;
+
+	private IEnumerable<string> functionList = new List<string> { "Read Register", "Write Register", "Read Coil", "Write Coil" };
+	private string targetFun = "";
+
+	private ushort startAddress = 0;
+	private ushort offset = 1;
+
+	private List<ValueType> dynamicList = new();
+	private Type currentType;
+	private bool readOnly = true;
+
+	private Thread updateThread;
+	private DateTime lastUpdateTime = DateTime.MinValue;
+	private int updateInterval = 1000;
+
+	protected override Task OnInitializedAsync()
+	{
+		targetFun = functionList.First();
+		client = new TcpClient("127.0.0.1", 502);
+		factory = new ModbusFactory();
+		master = factory.CreateMaster(client);
+		return base.OnInitializedAsync();
+
+
+	}
+	private Task FunctionChanged(string s)
+	{
+		if (dynamicList.Count > 0)
+		{
+			dynamicList.Clear();
+		}
+		switch (s)
+		{
+			case "Read Register":
+			case "Read Coil":
+				readOnly = true;
+				break;
+			case "Write Register":
+			case "Write Coil":
+				readOnly = false;
+				break;
+			default:
+				break;
+
+		}
+		targetFun = s;
+		return Task.CompletedTask;
+	}
+	//type, edit
+	private async Task ModbusAction()
+	{
+		if (offset < 1)
+		{
+			offset = 1;
+			return;
+		}
+		switch (targetFun)
+		{
+			case "Read Register":
+				updateThread = new Thread(async () =>
+				{
+					while (readOnly && targetFun == "Read Register")
+					{
+						ushort[] numFromModbus = await master.ReadHoldingRegistersAsync(1, startAddress, offset);
+						currentType = typeof(ushort);
+						dynamicList.Clear();
+						foreach (ushort val in numFromModbus)
+						{
+							dynamicList.Add(val);
+						}
+						lastUpdateTime = DateTime.Now;
+						await InvokeAsync(() => { StateHasChanged(); });
+						Thread.Sleep(updateInterval);
+					}
+				});
+				updateThread.Start();
+				break;
+			case "Write Register":
+				ushort[] numFromModbus = await master.ReadHoldingRegistersAsync(1, startAddress, offset);
+				currentType = typeof(ushort);
+				dynamicList.Clear();
+				foreach (ushort val in numFromModbus)
+				{
+					dynamicList.Add(val);
+				}
+				lastUpdateTime = DateTime.MinValue;
+				break;
+			case "Read Coil":
+				updateThread = new Thread(async () =>
+					{
+						while (readOnly && targetFun == "Read Coil")
+						{
+							bool[] boolFromModbus = await master.ReadCoilsAsync(1, startAddress, offset);
+							currentType = typeof(bool);
+							dynamicList.Clear();
+							foreach (bool val in boolFromModbus)
+							{
+								dynamicList.Add(val);
+							}
+							lastUpdateTime = DateTime.Now;
+							await InvokeAsync(() => { StateHasChanged(); });
+							Thread.Sleep(updateInterval);
+						}
+					});
+				updateThread.Start();
+				break;
+			case "Write Coil":
+				bool[] boolFromModbus = await master.ReadCoilsAsync(1, startAddress, offset);
+				currentType = typeof(bool);
+				dynamicList.Clear();
+				foreach (bool val in boolFromModbus)
+				{
+					dynamicList.Add(val);
+				}
+				break;
+			default:
+				break;
+
+		}
+	}
+	private async Task GetNewModbusValue(List<ValueType> newValues)
+	{
+		switch (targetFun)
+		{
+			case "Write Register":
+				ushort[] newVals_ushort = newValues.Select(x => (ushort)x).ToArray();
+				await master.WriteMultipleRegistersAsync(1, startAddress, newVals_ushort);
+				dynamicList.Clear();
+				break;
+			case "Write Coil":
+				bool[] newVals_bool = newValues.Select(x => (bool)x).ToArray();
+				await master.WriteMultipleCoilsAsync(1, startAddress, newVals_bool);
+				dynamicList.Clear();
+				break;
+			default:
+				break;
+
+		}
+	}
+}

@@ -1,0 +1,74 @@
+﻿@if (ContentList.Count > 0)
+{
+	<DxFormLayout>
+		<DxFormLayoutGroup>
+			@foreach (KeyValuePair<ushort, ValueType> v in modbusDict)
+			{
+				<DxFormLayoutItem Caption="@v.Key.ToString()" ColSpanLg="2" BeginRow=true>
+					@if (CurrentType == typeof(ushort))
+					{
+						<DxSpinEdit Value="@Convert.ToUInt16(v.Value)" ValueChanged="((ushort val)=>{OnModbusValieChanged(v.Key, val);})" ReadOnly="@ReadOnly"></DxSpinEdit>
+					}
+					else if (CurrentType == typeof(bool))
+					{
+						<DxCheckBox Checked="Convert.ToBoolean(v.Value)" CheckedChanged="((bool flag)=>{OnModbusValieChanged(v.Key, flag);})" CheckType="CheckType.Switch" Enabled="@(!ReadOnly)"></DxCheckBox>
+					}
+				</DxFormLayoutItem>
+			}
+			<DxFormLayoutItem ColSpanLg="2" BeginRow=true>
+				@if (!ReadOnly)
+				{
+					<DxButton Text="Modify" Click="@(async ()=>{await SendModbusValueAndUpdate();})"></DxButton>
+				}
+			</DxFormLayoutItem>
+		</DxFormLayoutGroup>
+	</DxFormLayout>
+}
+
+
+@code {
+	private List<ValueType> _ContentList = new();
+	[Parameter]
+	public List<ValueType> ContentList { get { return _ContentList; } set { _ContentList = value; ContentChange(); } }
+	[Parameter]
+	public Type CurrentType { get; set; }
+	[Parameter]
+	public ushort StartAddress { get; set; }
+	[Parameter]
+	public bool ReadOnly { get; set; }
+	[Parameter]
+	public EventCallback<List<ValueType>> ECModifyModbus { get; set; }
+
+	private Dictionary<ushort, ValueType> modbusDict = new();
+
+	protected override Task OnInitializedAsync()
+	{
+		return base.OnInitializedAsync();
+	}
+
+	private void ContentChange()
+	{
+		modbusDict.Clear();
+		for (ushort i = 0; i < ContentList.Count; i++)
+		{
+			modbusDict.Add(Convert.ToUInt16(StartAddress + i), ContentList[i]);
+		}
+	}
+
+	protected override Task OnParametersSetAsync()
+	{
+		return base.OnParametersSetAsync();
+	}
+
+	private void OnModbusValieChanged(ushort key, ValueType value)
+	{
+		modbusDict[key] = value;
+	}
+
+	private async Task SendModbusValueAndUpdate()
+	{
+		await ECModifyModbus.InvokeAsync(modbusDict.Select(x => x.Value).ToList());
+		ContentList.Clear();
+	}
+
+}

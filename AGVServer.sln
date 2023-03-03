@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AGVServer", "AGVServer.csproj", "{425B72DA-96BE-44E8-839B-2FE8E5B91ABC}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "PySignalR", "..\PySignalR\PySignalR.pyproj", "{A5C85BA2-6F59-481D-BACC-96545C1D5107}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{425B72DA-96BE-44E8-839B-2FE8E5B91ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{425B72DA-96BE-44E8-839B-2FE8E5B91ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{425B72DA-96BE-44E8-839B-2FE8E5B91ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{425B72DA-96BE-44E8-839B-2FE8E5B91ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5C85BA2-6F59-481D-BACC-96545C1D5107}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5C85BA2-6F59-481D-BACC-96545C1D5107}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {73F1EB10-F30C-4C39-A6CD-BDFFFF0D754E}
+	EndGlobalSection
+EndGlobal

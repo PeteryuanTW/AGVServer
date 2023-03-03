@@ -1,0 +1,141 @@
+﻿@page "/SugnalR"
+@inject NavigationManager navigationManager
+@inject HubLog hubLog
+<style>
+	.my-style {
+		width:30%;
+	}
+</style>
+
+@if (!connect)
+{
+	<DxButton Text="Connect" Click="ConnectSignalr"></DxButton>
+}
+else if (connect && hubConnection is not null)
+{
+	<DxButton Text="Disconnect" Click="DisconnectSignalr"></DxButton>
+	<div></div>
+	<DxTextBox @bind-Text="@msg" CssClass="my-style"></DxTextBox>
+	<DxButton Text="Send" Click="Send"></DxButton>
+}
+
+<DxGrid Data="clients">
+	<Columns>
+		<DxGridDataColumn FieldName="ip" />
+		<DxGridDataColumn FieldName="id" />
+		<DxGridDataColumn FieldName="act">
+			<CellDisplayTemplate>
+				@switch ((SignalRAction)context.Value)
+				{
+					case SignalRAction.Connect:
+						<div class="oi oi-link-intact"></div>
+						break;
+					case SignalRAction.Send:
+						<div class="oi oi-transfer"></div>
+						break;
+					case SignalRAction.Receive:
+						break;
+					case SignalRAction.Disconnect:
+						break;
+					default:
+						break;
+				}
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="time">
+			<CellDisplayTemplate>
+				<DxTimeEdit Time="(DateTime)context.Value" Format="yyyy/MM/dd HH:mm" ReadOnly="true"></DxTimeEdit>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+	</Columns>
+</DxGrid>
+@foreach (string s in responseFromServer)
+{
+	<div class="alert alert-success" role="alert">@s</div>
+}
+
+@code
+{
+	private List<SignalRClient> clients = new();
+	private HubConnection? hubConnection;
+	private bool connect = false;
+	private string msg = "";
+	private List<string> responseFromServer = new();
+
+	protected override void OnInitialized()
+	{
+		clients = hubLog.GetConnectedClients();
+
+		hubLog.ClientCahngeAct += GetNewClient;
+	}
+	private async Task ConnectSignalr()
+	{
+		if (hubConnection == null)
+		{
+			hubConnection = new HubConnectionBuilder().WithUrl(navigationManager.ToAbsoluteUri("/SignalrHub")).Build();
+		}
+		if (!connect)
+		{
+			await hubConnection.StartAsync();
+			connect = true;
+			hubConnection.On<string>("ResponseFromServer", async (string s) =>
+			{
+				responseFromServer.Add(s);
+				await InvokeAsync(() => { StateHasChanged(); });
+			});
+		}
+
+	}
+	private async Task DisconnectSignalr()
+	{
+		if (hubConnection != null)
+		{
+			await hubConnection.StopAsync();
+			connect = false;
+		}
+	}
+
+	private async Task Send()
+	{
+		await hubConnection.SendAsync("SendMsg", msg);
+	}
+
+	private Task MsgFromServer()
+	{
+		return Task.CompletedTask;
+	}
+
+	private async void GetNewClient(SignalRClient targetClient)
+	{
+		switch (targetClient.act)
+		{
+			case SignalRAction.Connect:
+				if (!clients.Exists(x => x.id == targetClient.id))
+					clients.Add(targetClient);
+				break;
+			case SignalRAction.Disconnect:
+				if (clients.Exists(x => x.id == targetClient.id))
+					clients.RemoveAll((x) => x.id == targetClient.id);
+				break;
+			case SignalRAction.Send:
+			case SignalRAction.Receive:
+				foreach (SignalRClient signalRClient in clients)
+				{
+					if (signalRClient.id == targetClient.id)
+					{
+						signalRClient.act = targetClient.act;
+						signalRClient.time = DateTime.Now;
+					}
+				}
+				break;
+			default:
+				break;
+		}
+		await InvokeAsync(() =>
+		{
+			StateHasChanged();
+		});
+
+	}
+
+}

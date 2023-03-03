@@ -1,0 +1,24 @@
+﻿@page "/MXProtocol"
+
+
+<DxFormLayout>
+	<DxFormLayoutGroup>
+		<DxFormLayoutItem Caption="IP Address" ColSpanLg="2">
+			<DxSpinEdit @bind-Value="ipArray[0]"></DxSpinEdit>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="." ColSpanLg="1">
+			<DxSpinEdit @bind-Value="ipArray[1]"></DxSpinEdit>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="." ColSpanLg="1">
+			<DxSpinEdit @bind-Value="ipArray[2]"></DxSpinEdit>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="." ColSpanLg="1">
+			<DxSpinEdit @bind-Value="ipArray[3]"></DxSpinEdit>
+		</DxFormLayoutItem>
+	</DxFormLayoutGroup>
+</DxFormLayout>
+
+
+@code {
+	private ushort[] ipArray = new ushort[] { 127, 0, 0, 1 };
+}
