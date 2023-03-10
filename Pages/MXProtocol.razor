@@ -1,24 +1,258 @@
 ﻿@page "/MXProtocol"
 
-
 <DxFormLayout>
 	<DxFormLayoutGroup>
-		<DxFormLayoutItem Caption="IP Address" ColSpanLg="2">
-			<DxSpinEdit @bind-Value="ipArray[0]"></DxSpinEdit>
+		<DxFormLayoutItem Caption="IP Address" ColSpanLg="3" BeginRow=true>
+			<DxTextBox Text="@ip" TextChanged="((string s)=>{GetIP(s);})" ReadOnly="@connected"></DxTextBox>
 		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="." ColSpanLg="1">
-			<DxSpinEdit @bind-Value="ipArray[1]"></DxSpinEdit>
+		<DxFormLayoutItem Caption="Port" ColSpanLg="2" BeginRow=true>
+			<DxSpinEdit @bind-Value="@port" ReadOnly="@connected"></DxSpinEdit>
 		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="." ColSpanLg="1">
-			<DxSpinEdit @bind-Value="ipArray[2]"></DxSpinEdit>
-		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="." ColSpanLg="1">
-			<DxSpinEdit @bind-Value="ipArray[3]"></DxSpinEdit>
-		</DxFormLayoutItem>
+		@if (!connected)
+		{
+			<DxFormLayoutItem Caption="" ColSpanLg="2" BeginRow=true>
+				<DxButton Text="Connect" RenderStyle="@ButtonRenderStyle.Success" Click="CreateTCPClientConnect"></DxButton>
+			</DxFormLayoutItem>
+		}
+		else
+		{
+			<DxFormLayoutItem Caption="" ColSpanLg="2" BeginRow=true>
+				<DxButton Text="Disconnect" RenderStyle="@ButtonRenderStyle.Danger" Click="TCPClientDisconnect"></DxButton>
+			</DxFormLayoutItem>
+		}
 	</DxFormLayoutGroup>
+	@if (connected)
+	{
+		<DxFormLayoutGroup>
+			<DxFormLayoutItem Caption="Command" ColSpanLg="3" BeginRow=true>
+				<DxComboBox Data="byteCommands" Value="@currentCommand" SelectedItemChanged="((ByteCommand bc)=>{currentCommand = bc; RefreshRes();})" EditFormat="{0} {1}">
+					<DxListEditorColumn FieldName="@nameof(ByteCommand.command)" />
+					<DxListEditorColumn FieldName="@nameof(ByteCommand._byte_string)" />
+				</DxComboBox>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="PC No." ColSpanLg="3" BeginRow=true>
+				<DxSpinEdit @bind-Value="@PCNo_ushort" MaxValue="(ushort)255"></DxSpinEdit>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Time Out" ColSpanLg="3" BeginRow=true>
+				<DxSpinEdit @bind-Value="@timeOut_ushort" MaxValue="(ushort)65535"></DxSpinEdit>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Component" ColSpanLg="3" BeginRow=true>
+				<DxComboBox Data="byteComponents" Value="@currentComponent" SelectedItemChanged="((ByteComponent bc)=>{currentComponent = bc; maxStartAddress = bc.maxVal; RefreshRes();})" EditFormat="{0} {1}">
+					<DxListEditorColumn FieldName="@nameof(ByteComponent.name)"/>
+					<DxListEditorColumn FieldName="@nameof(ByteComponent.nameCode_string)" />
+				</DxComboBox>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Start Address" ColSpanLg="3" BeginRow=true>
+				<DxSpinEdit @bind-Value="@startAddress_ushort" MaxValue="maxStartAddress"></DxSpinEdit>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Offset" ColSpanLg="3" BeginRow=true>
+				<DxSpinEdit @bind-Value="@offset_ushort" MaxValue="(ushort)255"></DxSpinEdit>
+			</DxFormLayoutItem>
+		</DxFormLayoutGroup>
+
+		<DxFormLayoutGroup>
+			<DxFormLayoutItem Caption="Final Command" ColSpanLg="6" BeginRow=true>
+				<DxTextBox Text="@BitConverter.ToString(finalRes.ToArray())" ReadOnly=true></DxTextBox>
+			</DxFormLayoutItem>
+		</DxFormLayoutGroup>
+	}
 </DxFormLayout>
 
 
 @code {
-	private ushort[] ipArray = new ushort[] { 127, 0, 0, 1 };
+	//connection
+	private TcpClient tcpClient;
+	private bool connected = false;
+	private IPAddress _IPAddress;
+	private string ip;
+	private void GetIP(string s)
+	{
+		if (IPAddress.TryParse(s, out _IPAddress))
+		{
+			switch (_IPAddress.AddressFamily)
+			{
+				case System.Net.Sockets.AddressFamily.InterNetwork:
+					ip = s;
+					break;
+				case System.Net.Sockets.AddressFamily.InterNetworkV6:
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	private ushort port = 502;
+
+	//byte
+	private List<byte> finalRes = new();
+
+	private IEnumerable<ByteCommand> byteCommands;
+	private ByteCommand currentCommand;
+
+	private ushort PCNo = 0;
+	private ushort PCNo_ushort
+	{
+		get
+		{
+			return PCNo;
+		}
+		set
+		{
+			if (value > 255)
+			{
+				value = 255;
+			}
+			PCNo = value;
+			PCNo_byte = Convert.ToByte(value);
+			RefreshRes();
+		}
+	}
+	private byte PCNo_byte;
+
+	private ushort timeOut = 0;
+	private ushort timeOut_ushort
+	{
+		get
+		{
+			return timeOut;
+		}
+		set
+		{
+			if (value > 65535)
+			{
+				value = 65535;
+			}
+			timeOut = value;
+			byte[] tmpArray = BitConverter.GetBytes(value);
+			Array.Resize(ref tmpArray, 2);
+			timeOut_byte = tmpArray.Reverse().ToArray();
+		}
+	}
+	private byte[] timeOut_byte = new byte[2] { 0x00, 0x00 };
+
+	private IEnumerable<ByteComponent> byteComponents;
+	private ByteComponent currentComponent;
+	private ushort maxStartAddress = 0;
+
+	private ushort startAddress = 0;
+	private ushort startAddress_ushort
+	{
+		get
+		{
+			return startAddress;
+		}
+		set
+		{
+			if (value > maxStartAddress)
+			{
+				value = maxStartAddress;
+			}
+			startAddress = value;
+
+			byte[] tmpArray = BitConverter.GetBytes(value);
+			Array.Resize(ref tmpArray, 4);
+			startAddress_byte = tmpArray.Reverse().ToArray();
+			RefreshRes();
+		}
+	}
+	private byte[] startAddress_byte = new byte[4] { 0x00, 0x00, 0x00, 0x00 };
+
+	private ushort offset = 0;
+	private ushort offset_ushort
+	{
+		get
+		{
+			return offset;
+		}
+		set
+		{
+			if (value > 255)
+			{
+				value = 255;
+			}
+			startAddress = value;
+
+			byte[] tmpArray = BitConverter.GetBytes(value);
+			Array.Resize(ref tmpArray, 2);
+			offset_byte = tmpArray.Reverse().ToArray();
+			RefreshRes();
+		}
+	}
+	private byte[] offset_byte = new byte[2] { 0x00, 0x00 };
+
+
+	protected override Task OnInitializedAsync()
+	{
+		byteCommands = CommandsInit();
+		currentCommand = byteCommands.First();
+		byteComponents = ComponentsInit();
+		currentComponent = byteComponents.First();
+		return base.OnInitializedAsync();
+	}
+	private IEnumerable<ByteCommand> CommandsInit()
+	{
+		return new List<ByteCommand>()
+		{
+			new ByteCommand(0x00, "Batch Reading(bit)"),
+			new ByteCommand(0x01, "Batch Reading(str)"),
+			new ByteCommand(0x02, "Batch Writing(bit)"),
+			new ByteCommand(0x03, "Batch Writing(str)"),
+			new ByteCommand(0x04, "Random Write(bit)"),
+			new ByteCommand(0x05, "Random Write(str)"),
+		};
+	}
+	private IEnumerable<ByteComponent> ComponentsInit()
+	{
+		return new List<ByteComponent>()
+		{
+			new ByteComponent(0x58, "DI"),
+			new ByteComponent(0x59, "DO"),
+			new ByteComponent(0x44, "Register"),
+		};
+	}
+	private async Task CreateTCPClientConnect()
+	{
+		tcpClient = new TcpClient();
+		try
+		{
+			await tcpClient.ConnectAsync(_IPAddress, port);
+			if (tcpClient.Connected)
+			{
+				connected = true;
+			}
+			else
+			{
+
+			}
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine(e.Message);
+		}
+	}
+	private Task TCPClientDisconnect()
+	{
+		try
+		{
+			tcpClient.Close();
+			connected = false;
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine(e.Message);
+		}
+		return Task.CompletedTask;
+	}
+	private void RefreshRes()
+	{
+		finalRes = new();
+
+		finalRes.AddRange(new List<byte>() { currentCommand._byte });
+		finalRes.AddRange(new List<byte>() { PCNo_byte });
+		finalRes.AddRange(timeOut_byte);
+		finalRes.AddRange(new List<byte>() { currentComponent.nameCode, currentComponent.postfix});
+		finalRes.AddRange(startAddress_byte);
+		finalRes.AddRange(offset_byte);
+		StateHasChanged();
+	}
 }
