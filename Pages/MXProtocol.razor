@@ -46,7 +46,7 @@
 				<DxSpinEdit @bind-Value="@startAddress_ushort" MaxValue="maxStartAddress"></DxSpinEdit>
 			</DxFormLayoutItem>
 			<DxFormLayoutItem Caption="Offset" ColSpanLg="3" BeginRow=true>
-				<DxSpinEdit @bind-Value="@offset_ushort" MaxValue="(ushort)255"></DxSpinEdit>
+				<DxSpinEdit @bind-Value="@offset_ushort" MaxValue="(ushort)offset_max"></DxSpinEdit>
 			</DxFormLayoutItem>
 		</DxFormLayoutGroup>
 
@@ -148,6 +148,7 @@
 				value = maxStartAddress;
 			}
 			startAddress = value;
+			offset_max = maxStartAddress - startAddress;
 
 			byte[] tmpArray = BitConverter.GetBytes(value);
 			Array.Resize(ref tmpArray, 4);
@@ -158,6 +159,7 @@
 	private byte[] startAddress_byte = new byte[4] { 0x00, 0x00, 0x00, 0x00 };
 
 	private ushort offset = 0;
+	private int offset_max = 0;
 	private ushort offset_ushort
 	{
 		get
@@ -166,11 +168,11 @@
 		}
 		set
 		{
-			if (value > 255)
+			if (value > offset_max)
 			{
-				value = 255;
+				value = (ushort)offset_max;
 			}
-			startAddress = value;
+			offset = value;
 
 			byte[] tmpArray = BitConverter.GetBytes(value);
 			Array.Resize(ref tmpArray, 2);
@@ -253,6 +255,7 @@
 		finalRes.AddRange(new List<byte>() { currentComponent.nameCode, currentComponent.postfix});
 		finalRes.AddRange(startAddress_byte);
 		finalRes.AddRange(offset_byte);
+		finalRes.AddRange(new List<byte>() { 0x00, 0x00 });
 		StateHasChanged();
 	}
 }

@@ -1,0 +1,14 @@
+﻿@page "/APITest"
+@page "/"
+
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+
+<DxButton Text="Swagger" Click="ToSwagger"></DxButton>
+
+@code {
+	private void ToSwagger()
+	{
+		navigationManager.NavigateTo("/swagger/index.html", true);
+	}
+}

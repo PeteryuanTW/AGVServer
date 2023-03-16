@@ -9,6 +9,7 @@
     <PackageReference Include="DevExpress.Xpo" Version="22.2.4" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="7.0.2" />
     <PackageReference Include="NModbus" Version="3.0.72" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\images\" />

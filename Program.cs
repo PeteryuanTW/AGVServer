@@ -6,12 +6,14 @@ using Microsoft.Extensions.Options;
 using NModbus;
 using System.Net.Sockets;
 using System.Net;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddHttpClient();
 builder.Services.AddDevExpressBlazor(options => {
     options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
     options.SizeMode = DevExpress.Blazor.SizeMode.Large;
@@ -25,6 +27,15 @@ builder.Services.AddResponseCompression(opts =>
         new[] { "application/octet-stream" });
 });
 
+#region api & swagger
+builder.Services.AddControllers();
+builder.Services.AddControllersWithViews();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v0", new OpenApiInfo { Title = "TM", Version = "v0" });
+});
+
+#endregion
 
 
 builder.WebHost.UseWebRoot("wwwroot");
@@ -54,7 +65,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
+app.MapControllers();   
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
@@ -75,6 +86,16 @@ var bgThread = new Thread(() =>
 });
 bgThread.IsBackground = true;
 bgThread.Start();
+#endregion
+
+#region swagger
+
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+	c.SwaggerEndpoint("/swagger/v0/swagger.json", "v0");
+});
+
 #endregion
 
 app.Run();
