@@ -18,9 +18,9 @@ namespace AGVServer.Controllers
 		}
 		[HttpGet]
 		[Route("[action]")]
-		public ActionResult GetTaskByID(string TaskID)
+		public ActionResult<MesTask> GetTaskByID(string TaskID)
 		{
-			return Ok();
+			return Ok(new MesTask() { TaskNO = "001", From = "start", To = "destination", SequenceNum = "002", Status = "waiting", Priority = 0 });
 		}
 		[HttpGet]
 		[Route("[action]")]
@@ -51,6 +51,7 @@ namespace AGVServer.Controllers
 
 		#region Put
 		[HttpPut]
+		[Route("[action]")]
 		public ActionResult UpdateTaskStatus(string taskNO, string status)
 		{
 			return Ok();

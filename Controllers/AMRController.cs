@@ -10,13 +10,13 @@ namespace AGVServer.Controllers
 	{
 		[HttpGet]
 		[Route("[action]")]
-		public ActionResult GetAllAMRStatus()
+		public ActionResult<List<AMRStatus>> GetAllAMRStatus()
 		{
-			return Ok();
+			return Ok(new List<AMRStatus>());
 		}
 		[HttpGet]
 		[Route("[action]")]
-		public ActionResult GetAMRStatusByID(string AMRID)
+		public ActionResult<AMRStatus> GetAMRStatusByID(string AMRID)
 		{
 			return Ok(new AMRStatus() { robot_id = "robot_id", robot_name = "robot_name", model = "model", task_id = "task_id", mode = 0, battery_percent = 0, last_update_time = 0.0 });
 		}

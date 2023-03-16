@@ -4,7 +4,11 @@ namespace AGVServer.Data
 {
 	public class AMRStatus
 	{
+		
 		[Required]
+		/// <summary>
+		/// Temperature in celcius
+		/// </summary>
 		public string robot_id { get; set; }
 		[Required]
 		public string robot_name { get; set; }
