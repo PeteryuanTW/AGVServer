@@ -7,6 +7,7 @@ using NModbus;
 using System.Net.Sockets;
 using System.Net;
 using Microsoft.OpenApi.Models;
+using AGVServer.EFModels;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,11 +42,24 @@ builder.Services.AddSwaggerGen(options =>
 builder.WebHost.UseWebRoot("wwwroot");
 builder.WebHost.UseStaticWebAssets();
 
-
+builder.Services.AddDbContextFactory<AGVDBContext>();
 
 //builder.Services.AddSignalR();
 //builder.Services.AddSingleton<HubLog>();
+#region Service
+builder.Services.AddSingleton<DataBufferService>();
+builder.Services.AddSingleton<ConfigService>();
 
+builder.Services.AddSingleton<SwarmCoreUpdateService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<SwarmCoreUpdateService>());
+
+
+builder.Services.AddSingleton<TokenUpdateService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TokenUpdateService>());
+
+builder.Services.AddSingleton<PLCUpdateService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<PLCUpdateService>());
+#endregion
 
 var app = builder.Build();
 

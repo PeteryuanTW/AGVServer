@@ -1,0 +1,148 @@
+﻿@page "/Config"
+@implements IDisposable
+@inject ConfigService configService
+@inject DataBufferService dataBufferService
+@inject TokenUpdateService tokenService
+@inject SwarmCoreUpdateService swarmCoreUpdateService
+
+<div class="alert alert-@GetupdateStatusCss(tokenValid)" role="alert">
+	<DxCheckBox Checked="@tokenValid" CheckedChanged="(async (bool b)=>{await SwitchService(b);})" Enabled="@(!editMode)" CheckType="CheckType.Switch">@token</DxCheckBox>
+	@tokenUpdateTime
+</div>
+<div class="alert alert-@GetupdateStatusCss(apiUpdate)" role="alert">
+	<DxCheckBox Checked="@apiUpdate" CheckType="CheckType.Switch" Enabled="false"></DxCheckBox>
+	@apiUpdateTime
+</div>
+<DxFormLayout>
+	<DxFormLayoutGroup Caption="Swarm Core Setting" ColSpanMd="5">
+		<DxFormLayoutItem Caption=EditMode ColSpanMd="6" BeginRow=true>
+			<DxCheckBox @bind-Checked="editMode" Enabled="@(!tokenValid && !apiUpdate && !editMode)" CheckType="CheckType.Switch"></DxCheckBox>
+		</DxFormLayoutItem>
+		@foreach (Configuration configuration in configurations)
+		{
+			<DxFormLayoutItem Caption=@configuration.ConfigName ColSpanMd="8" BeginRow=true>
+				<DxTextBox @bind-Text="@configuration.ConfigValue" Enabled="@editMode"></DxTextBox>
+			</DxFormLayoutItem>
+		}
+		@if (editMode)
+		{
+			<DxFormLayoutItem ColSpanMd="8" BeginRow=true>
+				<DxButton Text="Save" Click="SaveConfig" RenderStyle="ButtonRenderStyle.Danger"></DxButton>
+			</DxFormLayoutItem>
+		}
+
+	</DxFormLayoutGroup>
+</DxFormLayout>
+
+
+
+
+@code {
+	private IEnumerable<Configuration> configurations;
+	private bool editMode = false;
+
+	private bool tokenValid;
+	private DateTime tokenUpdateTime;
+	private string token = "";
+
+	private bool apiUpdate;
+	private DateTime apiUpdateTime;
+
+	protected override Task OnInitializedAsync()
+	{
+		configurations = configService.GetConfigs();
+		tokenValid = configService.GetTokenValid();
+		token = dataBufferService.GetBearerToken();
+		tokenUpdateTime = configService.GetTokenUpdateTime();
+
+		apiUpdate = dataBufferService.GetswarmCoreUpdateFlag();
+		apiUpdateTime = dataBufferService.GetSwarmCoreUpdateTime();
+
+		configService.SwarmCoreTokenChangeAct += SwarmCoreTokenChange;
+		dataBufferService.BearerTokenChangeAct += TokenChange;
+		dataBufferService.swarmCoreUpdateFlagChangeAct += apiUpdateChange;
+
+		return base.OnInitializedAsync();
+	}
+	public void Dispose()
+	{
+		configService.SwarmCoreTokenChangeAct -= SwarmCoreTokenChange;
+		dataBufferService.BearerTokenChangeAct -= TokenChange;
+		dataBufferService.swarmCoreUpdateFlagChangeAct -= apiUpdateChange;
+	}
+
+	private async Task SwitchService(bool flag)
+	{
+		if (flag)
+		{
+			await tokenService.StartAsync(default);
+		}
+		else
+		{
+			await tokenService.StopAsync(default);
+		}
+
+		//configService.SetTokenValid(flag);
+		//editMode = !configService.GetTokenValid();
+	}
+
+	private string GetupdateStatusCss(bool flag)
+	{
+		string res = "primary";
+		if (flag)
+		{
+			res = "primary";
+		}
+		else if (!flag)
+		{
+			res = "secondary";
+		}
+		return res;
+	}
+
+	private void SwarmCoreTokenChange(bool con, DateTime dateTime)
+	{
+		InvokeAsync(() =>
+			{
+				tokenValid = con;
+				tokenUpdateTime = dateTime;
+				GetupdateStatusCss(editMode);
+				StateHasChanged();
+			});
+
+	}
+
+	private void TokenChange(string tokenStr)
+	{
+		InvokeAsync(() =>
+			{
+				token = tokenStr;
+				StateHasChanged();
+			});
+
+	}
+
+	private void apiUpdateChange(bool updateFlag, DateTime updateTime)
+	{
+		InvokeAsync(() =>
+			{
+				apiUpdate = updateFlag;
+				apiUpdateTime = updateTime;
+				StateHasChanged();
+			});
+
+	}
+
+	private void SaveConfig()
+	{
+		InvokeAsync(() =>
+			{
+				configService.UpdateConfigs(configurations);
+				configService.InitialVar();
+				configurations = configService.GetConfigs();
+				editMode = false;
+				tokenService.StartAsync(default);
+				StateHasChanged();
+			});
+	}
+}

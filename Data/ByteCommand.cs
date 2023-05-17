@@ -1,15 +1,21 @@
-﻿namespace AGVServer.Data
+﻿using System.Text;
+
+namespace AGVServer.Data
 {
 	public class ByteCommand
 	{
-		public byte _byte { get; set; }
-		public string _byte_string { get; set; }
+		public byte[] _byte { get; set; }
 		public string command { get; set; }
-		public ByteCommand(byte _byte, string command)
+		public CommandType commandType { get; set; }
+		public string byteString { get; set; }
+		public ByteCommand(byte[] _byte, string command, CommandType commandType)
 		{
 			this._byte = _byte;
-			this._byte_string = BitConverter.ToString(new List<byte>() { this._byte }.ToArray());
+			byteString = BitConverter.ToString(_byte).Replace("-", " ");
 			this.command = command;
+			this.commandType = commandType;
 		}
 	}
+
+	public enum CommandType {Read, Write, Bit, Word };
 }

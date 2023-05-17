@@ -1,0 +1,62 @@
+﻿@page "/PLCDashboard"
+@inject DataBufferService dataBufferService
+
+<DxGrid Data="@plcClasses">
+	<Columns>
+		<DxGridDataColumn FieldName="ip">
+			<CellDisplayTemplate>
+				<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="port">
+			<CellDisplayTemplate>
+				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="name">
+			<CellDisplayTemplate>
+				<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="type">
+			<CellDisplayTemplate>
+				<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="tcpConnect">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+	</Columns>
+	<DetailRowTemplate>
+		<MXModbusTable PLCValueTables="((PLCClass)context.DataItem).valueTables" />
+	</DetailRowTemplate>
+
+
+
+
+</DxGrid>
+
+@code {
+
+	private IEnumerable<PLCClass> plcClasses;
+
+
+
+	protected override Task OnInitializedAsync()
+	{
+		plcClasses = dataBufferService.GetPLCClasses().ToList();
+		dataBufferService.PLCClassesChangeAct += PLCDataChange;
+		return base.OnInitializedAsync();
+	}
+
+	private void PLCDataChange(List<PLCClass> newPLCClasses)
+	{
+		InvokeAsync(() =>
+		{
+			plcClasses = newPLCClasses;
+			StateHasChanged();
+		});
+	}
+}

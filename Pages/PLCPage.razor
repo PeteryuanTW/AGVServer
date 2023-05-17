@@ -1,0 +1,130 @@
+﻿@page "/PLCPage"
+@using NModbus
+@implements IDisposable
+@inject DataBufferService dataBufferService
+
+<DxGrid Data="@plcClasses" FocusedRowEnabled="true" FocusedRowChanged="(async (GridFocusedRowChangedEventArgs e)=>{await SelectNewPLC(e);})">
+	<Columns>
+		<DxGridDataColumn FieldName="name" />
+		<DxGridDataColumn FieldName="ip" />
+		<DxGridDataColumn FieldName="port" />
+		<DxGridDataColumn FieldName="modbusStartAddress" />
+		<DxGridDataColumn FieldName="mxStartAdd" />
+		<DxGridDataColumn FieldName="offset" />
+		<DxGridDataColumn FieldName="tcpConnect">
+			<CellDisplayTemplate>
+				<DxCheckBox Enabled="false" Checked="(bool)context.Value" CheckType="CheckType.Switch" />
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+	</Columns>
+</DxGrid>
+<br>
+@if (correntPLC != null)
+{
+	<DxFormLayout>
+		<DxFormLayoutGroup Caption="Modbus" ColSpanMd="3">
+			@foreach (KeyValuePair<ushort, bool> kvp in coilsDictFromModbus)
+			{
+				<DxFormLayoutItem Caption="@kvp.Key.ToString()" ColSpanMd="8">
+					<DxCheckBox Enabled="false" Checked="kvp.Value" CheckType="CheckType.Switch" />
+				</DxFormLayoutItem>
+			}
+		</DxFormLayoutGroup>
+		<DxFormLayoutGroup Caption="PLC" ColSpanMd="3">
+			@foreach (KeyValuePair<ushort, bool> kvp in MsDictFromMX)
+			{
+				<DxFormLayoutItem Caption="@kvp.Key.ToString()" ColSpanMd="8">
+					<DxCheckBox Enabled="false" Checked="kvp.Value" CheckType="CheckType.Switch" />
+				</DxFormLayoutItem>
+			}
+		</DxFormLayoutGroup>
+	</DxFormLayout>
+}
+
+@code {
+
+	private TcpClient tcpClient_LocalModbusSlave;
+	private ModbusFactory factory;
+	private IModbusMaster master;
+	private IEnumerable<PLCClass> plcClasses;
+	private PLCClass correntPLC;
+	private Dictionary<ushort, bool> coilsDictFromModbus = new();
+	private Dictionary<ushort, bool> MsDictFromMX = new();
+
+	protected override Task OnInitializedAsync()
+	{
+		if (tcpClient_LocalModbusSlave == null)
+		{
+			tcpClient_LocalModbusSlave = new TcpClient("127.0.0.1", 502);
+			factory = new ModbusFactory();
+			master = factory.CreateMaster(tcpClient_LocalModbusSlave);
+		}
+		plcClasses = dataBufferService.GetPLCClasses();
+		dataBufferService.PLCClassesChangeAct += GetNewPLCStatus;
+		return base.OnInitializedAsync();
+	}
+
+	public void Dispose()
+	{
+		dataBufferService.PLCClassesChangeAct -= GetNewPLCStatus;
+		correntPLC = null;
+	}
+
+	private void GetNewPLCStatus(List<PLCClass> newPLCClasses)
+	{
+		try
+		{
+			InvokeAsync(() =>
+			{
+				plcClasses = newPLCClasses;
+				StateHasChanged();
+			});
+
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine(e);
+		}
+
+	}
+
+	private async Task SelectNewPLC(GridFocusedRowChangedEventArgs e)
+	{
+		if (e.DataItem != null)
+		{
+			correntPLC = (PLCClass)e.DataItem;
+			//await GetModbusCoils();
+		}
+		else
+		{
+		}
+		
+
+	}
+
+	//private async Task GetModbusCoils()
+	//{
+	//	while (correntPLC != null)
+	//	{
+	//		//get modbus
+	//		ushort startIndex = correntPLC.modbusStartAddress;
+	//		ushort offset = correntPLC.offset;
+	//		bool[] tmp = await master.ReadCoilsAsync(1, startIndex, offset);
+	//		for (ushort i = 0; i < offset; i++)
+	//		{
+	//			if (coilsDictFromModbus.ContainsKey((ushort)(startIndex + i)))
+	//			{
+	//				coilsDictFromModbus[(ushort)(startIndex + i)] = tmp[i];
+	//			}
+	//			else
+	//			{
+	//				coilsDictFromModbus.Add((ushort)(startIndex + i), tmp[i]);
+	//			}
+	//		}
+
+	//		MsDictFromMX = await correntPLC.GetPLCM();
+
+	//		await Task.Delay(1000);
+	//	}
+	//}
+}

@@ -1,0 +1,139 @@
+﻿<div class="container-fluid rounded border border-4" style="font-size:medium; margin:10px; border-color:#9898CD; background-color:#CCFFFF">
+	<div class="row">
+		<div class="col-sm-1" >
+			<i class="fa-solid fa-car" style="transform:translateY(50%)"></i>
+		</div>
+		<div class="col-sm-11" data-toggle="tooltip" title="ID: @status.robot_id" style="font-size:x-large; font-weight:bold">
+			<div >@status.robot_name</div>
+		</div>
+	</div>
+	<div class="row" style="margin:20px">
+		<div class="col-sm-2">
+			<i class="fa-solid @GetBatteryIcon(status.battery_percent)"></i>
+		</div>
+		<div class="col-sm-4" style="color:@GetBatteryColor(status.battery_percent)">@(status.battery_percent)(%)</div>
+		<div class="col-sm-2" style="font-weight:bold">Mode</div>
+		<div class="col-sm-4">
+			@GetModeString(status.mode)
+		</div>
+	</div>
+	<div class="row" style="margin:20px">
+		<div class="col-sm-2">
+			<i class="fa-solid fa-location-dot"></i>
+		</div>
+		<div class="col-sm-10" data-toggle="tooltip" title="Yaw:@status.position_yaw">(@status.position_x , @status.position_y)</div>
+	</div>
+	<div class="row" style="margin:20px">
+		<div class="col-sm-2">
+			<i class="fa-solid fa-list-check"></i>
+		</div>
+		<div class="col-sm-10">@status.task_id</div>
+	</div>
+	<div class="row" style="margin:20px">
+		<div class="col-sm-2">
+			<i class="fa-solid fa-arrows-rotate"></i>
+		</div>
+		<div class="col-sm-10">
+			<div>@status.last_update_time.ToString("HH:mm:ss")</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public AMRStatus? status { get; set; }
+
+	private string GetBatteryColor(int currentBattery)
+	{
+		string color = "";
+		if (currentBattery > 80)
+		{
+			color = "#00FF00";
+		}
+		else if (currentBattery >= 50 && currentBattery < 80)
+		{
+			color = "#999999";
+		}
+		else if (currentBattery >= 20 && currentBattery < 50)
+		{
+			color = "#FFB366";
+		}
+		else if (currentBattery < 20)
+		{
+			color = "#FF6666";
+		}
+		else
+		{
+			color = "#000000";
+		}
+		return color;
+	}
+	private string GetBatteryIcon(int currentBattery)
+	{
+		string icon = "";
+		if (currentBattery > 80)
+		{
+			icon = "fa-battery-full";
+		}
+		else if (currentBattery >= 50 && currentBattery < 80)
+		{
+			icon = "fa-battery-three-quarters";
+		}
+		else if (currentBattery >= 20 && currentBattery < 50)
+		{
+			icon = "fa-battery-halt";
+		}
+		else if (currentBattery < 20)
+		{
+			icon = "fa-battery-low fa-fade";
+		}
+		else
+		{
+			icon = "fa-battery-empty";
+		}
+		return icon;
+	}
+	private string GetChargingAnimation(int modeBit)
+	{
+		return modeBit == 0 ? "fa-fade" : "";
+	}
+
+	private string GetModeString(int modeBit)
+	{
+		string modeString = "";
+		switch (modeBit)
+		{
+			case 0:
+				modeString = "Idle";
+				break;
+			case 1:
+				modeString = "Charging";
+				break;
+			case 2:
+				modeString = "Moving";
+				break;
+			case 3:
+				modeString = "Paused";
+				break;
+			case 4:
+				modeString = "Waiting";
+				break;
+			case 5:
+				modeString = "Emergency";
+				break;
+			case 6:
+				modeString = "Going Home";
+				break;
+			case 7:
+				modeString = "Docking";
+				break;
+			case 8:
+				modeString = "Uninitialized";
+				break;
+			default:
+				modeString = "disconnect";
+				break;
+		}
+		return modeString;
+	}
+}

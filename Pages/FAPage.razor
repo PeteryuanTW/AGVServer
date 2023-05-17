@@ -1,0 +1,49 @@
+﻿@page "/FA"
+
+@implements IDisposable
+@inject DataBufferService dataBufferService
+@inject NavigationManager navigationManager
+
+@foreach (AMRStatus status in _AMRStatuses)
+{
+	<div style="width:30%">
+		<AMRComponent status="@status"></AMRComponent>
+	</div>
+}
+
+
+
+
+
+@code {
+	private IEnumerable<AMRStatus> _AMRStatuses;
+	protected override Task OnInitializedAsync()
+	{
+		_AMRStatuses = dataBufferService.GetAMRstatusList().OrderBy(x=>x.robot_id);
+		dataBufferService.AMRstatusListChangeAct += GetNewAMRStatus;
+
+		return base.OnInitializedAsync();
+	}
+	public void Dispose()
+	{
+		dataBufferService.AMRstatusListChangeAct -= GetNewAMRStatus;
+	}
+
+	private void GetNewAMRStatus(IEnumerable<AMRStatus> newStatusList)
+	{
+		try
+		{
+			InvokeAsync(() =>
+			{
+				_AMRStatuses = newStatusList.OrderBy(x => x.robot_id).ToList();
+				StateHasChanged();
+			});
+			
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine(e);
+		}
+		//return Task.CompletedTask;
+	}
+}

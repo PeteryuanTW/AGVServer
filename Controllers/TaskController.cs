@@ -1,4 +1,5 @@
 ﻿using AGVServer.Data;
+using AGVServer.Service;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -9,22 +10,31 @@ namespace AGVServer.Controllers
 	[ApiController]
 	public class TaskController : ControllerBase
 	{
+		private readonly DataBufferService dataBufferService;
+		public TaskController(DataBufferService dataBufferService)
+		{
+			this.dataBufferService = dataBufferService;
+		}
+
+
+
+
 		#region Get
 		[HttpGet]
 		[Route("[action]")]
 		public ActionResult<List<MesTask>> GetAllTasks()
 		{
-			return Ok(new List<MesTask> { new MesTask() {TaskNO="001", From="start", To="destination" , SequenceNum="002", Status="waiting", Priority=0 } });
+			return Ok(dataBufferService.GetTasks());
 		}
 		[HttpGet]
 		[Route("[action]")]
-		public ActionResult<MesTask> GetTaskByID(string TaskID)
+		public ActionResult<MesTask> GetTaskByID([FromRoute] string TaskID)
 		{
-			return Ok(new MesTask() { TaskNO = "001", From = "start", To = "destination", SequenceNum = "002", Status = "waiting", Priority = 0 });
+			return Ok(dataBufferService.GetTasksByNO(TaskID));
 		}
 		[HttpGet]
 		[Route("[action]")]
-		public ActionResult<bool> CheckSequenceNumInTask(string barcodeRes)
+		public ActionResult<bool> CheckSequenceNumInTask([FromRoute] string barcodeRes)
 		{
 			return Ok(true);
 		}
@@ -35,13 +45,14 @@ namespace AGVServer.Controllers
 		#region Post
 		[HttpPost]
 		[Route("[action]")]
-		public ActionResult AssignTask(MesTask mesTask)
+		public async Task<ActionResult> AssignTaskAsync([FromBody] MesTask mesTask)
 		{
+			await dataBufferService.GetNewTask(mesTask);
 			return Ok();
 		}
 		[HttpPost]
 		[Route("[action]")]
-		public ActionResult AssignTaskToAMR(MesTask mesTask, string amrID)
+		public ActionResult AssignTaskToAMR([FromRoute] MesTask mesTask, [FromRoute] string amrID)
 		{
 			return Ok();
 		}
@@ -52,7 +63,7 @@ namespace AGVServer.Controllers
 		#region Put
 		[HttpPut]
 		[Route("[action]")]
-		public ActionResult UpdateTaskStatus(string taskNO, string status)
+		public ActionResult UpdateTaskStatus([FromRoute] string taskNO, [FromRoute] string status)
 		{
 			return Ok();
 		}
@@ -62,7 +73,7 @@ namespace AGVServer.Controllers
 		#region Delete
 		[HttpDelete]
 		[Route("[action]")]
-		public ActionResult RemoveTaskByID(string TaskID)
+		public ActionResult RemoveTaskByID([FromQuery] string TaskID)
 		{
 			return Ok();
 		}

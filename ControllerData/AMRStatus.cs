@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace AGVServer.Data
 {
@@ -6,9 +7,6 @@ namespace AGVServer.Data
 	{
 		
 		[Required]
-		/// <summary>
-		/// Temperature in celcius
-		/// </summary>
 		public string robot_id { get; set; }
 		[Required]
 		public string robot_name { get; set; }
@@ -21,6 +19,25 @@ namespace AGVServer.Data
 		[Required]
 		public int battery_percent { get; set; }
 		[Required]
-		public double last_update_time { get; set; }
+		public double position_x { get; set; }
+		[Required]
+		public double position_y { get; set; }
+		[Required]
+		public double position_yaw { get; set; }
+		[Required]
+		public DateTime last_update_time { get; set; }
+
+		public AMRStatus(Robot robot)
+		{
+			robot_id = robot.robot_id;
+			robot_name = robot.robot_name;
+			model = robot.model;
+			task_id = robot.task_id;
+			mode = robot.mode;
+			battery_percent = (int)Math.Round(robot.battery_percent);
+			position_x = Math.Round(robot.location.x, 3);
+			position_y = Math.Round(robot.location.y, 3);
+			position_yaw = Math.Round(robot.location.yaw, 3);
+		}
 	}
 }

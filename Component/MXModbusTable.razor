@@ -1,0 +1,44 @@
+﻿@inject DataBufferService dataBufferService
+<div>@updateTime</div>
+<DxGrid Data="@PLCValueTables">
+	<Columns>
+		<DxGridDataColumn FieldName="mxIndex">
+			<CellDisplayTemplate>
+				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="modbusIndex">
+			<CellDisplayTemplate>
+				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="vlaue">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="alive">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+	</Columns>
+</DxGrid>
+
+@code {
+	[Parameter]
+	public IEnumerable<PLCValueTable> PLCValueTables { get; set; }
+	private DateTime updateTime;
+
+	protected override Task OnInitializedAsync()
+	{
+		updateTime = DateTime.Now;
+		return base.OnInitializedAsync();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		updateTime = DateTime.Now;
+		await base.OnParametersSetAsync();
+	}
+}

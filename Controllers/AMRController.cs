@@ -1,4 +1,5 @@
 ﻿using AGVServer.Data;
+using AGVServer.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,17 +9,24 @@ namespace AGVServer.Controllers
 	[ApiController]
 	public class AMRController : ControllerBase
 	{
+		private readonly DataBufferService dataBufferService;
+
+		public AMRController(DataBufferService dataBufferService)
+		{
+			this.dataBufferService = dataBufferService;
+		}
+
 		[HttpGet]
 		[Route("[action]")]
 		public ActionResult<List<AMRStatus>> GetAllAMRStatus()
 		{
-			return Ok(new List<AMRStatus>());
+			return Ok(dataBufferService.GetAMRstatusList());
 		}
 		[HttpGet]
 		[Route("[action]")]
-		public ActionResult<AMRStatus> GetAMRStatusByID(string AMRID)
+		public ActionResult<AMRStatus> GetAMRStatusByID([FromRoute] string AMRID)
 		{
-			return Ok(new AMRStatus() { robot_id = "robot_id", robot_name = "robot_name", model = "model", task_id = "task_id", mode = 0, battery_percent = 0, last_update_time = 0.0 });
+			return Ok(dataBufferService.GetAMRstatusList().First(x=>x.robot_id == AMRID));
 		}
 	}
 }
