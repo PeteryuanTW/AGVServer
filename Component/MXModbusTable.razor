@@ -2,24 +2,34 @@
 <div>@updateTime</div>
 <DxGrid Data="@PLCValueTables">
 	<Columns>
-		<DxGridDataColumn FieldName="mxIndex">
-			<CellDisplayTemplate>
-				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
 		<DxGridDataColumn FieldName="modbusIndex">
 			<CellDisplayTemplate>
 				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
 			</CellDisplayTemplate>
 		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="vlaue">
+		<DxGridDataColumn FieldName="modbusValue">
 			<CellDisplayTemplate>
 				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
 			</CellDisplayTemplate>
 		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="alive">
+		<DxGridDataColumn FieldName="mxIndex">
+			<CellDisplayTemplate>
+				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="mxSuccessWrite">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="mxValue">
 			<CellDisplayTemplate>
 				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="mxSuccessRead">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
 			</CellDisplayTemplate>
 		</DxGridDataColumn>
 	</Columns>

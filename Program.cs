@@ -4,10 +4,12 @@ using AGVServer.Service;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Options;
 using NModbus;
+
 using System.Net.Sockets;
 using System.Net;
 using Microsoft.OpenApi.Models;
 using AGVServer.EFModels;
+//using DevExpress.XtraPrinting.Shape.Native;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,8 +94,9 @@ TcpListener slaveTcpListener = new TcpListener(address, port);
 slaveTcpListener.Start();
 IModbusFactory factory = new ModbusFactory();
 IModbusSlaveNetwork network = factory.CreateSlaveNetwork(slaveTcpListener);
-IModbusSlave slave1 = factory.CreateSlave(1);
-network.AddSlave(slave1);
+IModbusSlave slave = factory.CreateSlave(1);
+
+network.AddSlave(slave);
 var bgThread = new Thread(() =>
 {
     network.ListenAsync().GetAwaiter().GetResult();

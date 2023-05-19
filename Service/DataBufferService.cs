@@ -5,6 +5,7 @@ using DevExpress.Utils.Filtering.Internal;
 using DevExpress.XtraPrinting.Shape.Native;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NModbus;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -144,7 +145,7 @@ namespace AGVServer.Service
 			return res;
 		}
 
-		public async Task UpdatePLCStatus()
+		public async Task UpdatePLCStatus(IModbusMaster master)
 		{
 			foreach (PLCClass plcClass in plcClasses)
 			{
@@ -166,12 +167,22 @@ namespace AGVServer.Service
 					}
 					if (plcClass.tcpConnect)
 					{
+						//update modbus value to mx and plc class
 						foreach (PLCValueTable mxModbusIndex in plcClass.valueTables)
 						{
-							(bool, bool) val = await plcClass.ReadSingleM_MX(mxModbusIndex.modbusIndex);
-							mxModbusIndex.vlaue = val.Item1;
-							mxModbusIndex.alive = val.Item2;
+							bool[] res = await master.ReadCoilsAsync(1, mxModbusIndex.modbusIndex, 1);
+							bool valFromModbus = res[0];
+							mxModbusIndex.modbusValue = valFromModbus;
+
+							mxModbusIndex.mxSuccessWrite = await plcClass.WriteSingleM_MX(mxModbusIndex.mxIndex, valFromModbus);
+
+							(bool, bool) readReturnVal = await plcClass.ReadSingleM_MX(mxModbusIndex.mxIndex);
+							//Console.WriteLine("check mx[" + mxModbusIndex.mxIndex + "] is " + readReturnVal.Item1.ToString()+"("+ readReturnVal .Item2+ ")");
+							mxModbusIndex.mxValue = readReturnVal.Item1;
+							mxModbusIndex.mxSuccessRead = readReturnVal.Item2;
 						}
+						//Console.WriteLine("=====" + DateTime.Now + "=====");
+						plcClass.SelfCheck();
 					}
 				}
 

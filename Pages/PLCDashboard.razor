@@ -25,28 +25,31 @@
 		</DxGridDataColumn>
 		<DxGridDataColumn FieldName="tcpConnect">
 			<CellDisplayTemplate>
-				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+				<DxCheckBox Checked="@((bool)context.Value)" CheckType=CheckType.Switch Enabled="false"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="keepUpdate">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" CheckType=CheckType.Switch Enabled="false"></DxCheckBox>
 			</CellDisplayTemplate>
 		</DxGridDataColumn>
 	</Columns>
 	<DetailRowTemplate>
 		<MXModbusTable PLCValueTables="((PLCClass)context.DataItem).valueTables" />
 	</DetailRowTemplate>
-
-
-
-
 </DxGrid>
 
 @code {
 
 	private IEnumerable<PLCClass> plcClasses;
+	private PLCClass currentPLC;
 
 
 
 	protected override Task OnInitializedAsync()
 	{
 		plcClasses = dataBufferService.GetPLCClasses().ToList();
+		currentPLC = plcClasses.First();
 		dataBufferService.PLCClassesChangeAct += PLCDataChange;
 		return base.OnInitializedAsync();
 	}

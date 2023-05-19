@@ -5,8 +5,11 @@
 		public ushort mxIndex { get; set; }
 		public ushort modbusIndex { get; set; }
 
-		public bool vlaue { get; set; }
+		public bool modbusValue { get; set; }
 
-		public bool alive { get; set; }
+		public bool mxValue { get; set; }
+		public bool mxSuccessWrite { get; set; }
+
+		public bool mxSuccessRead { get; set; }
 	}
 }

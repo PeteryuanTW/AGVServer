@@ -1,0 +1,88 @@
+﻿@page "/MCPLCTesting"
+@inject DataBufferService dataBufferService
+
+<DxFormLayout>
+	<DxFormLayoutItem Caption="Name" ColSpanLg="4" BeginRow = "true">
+		<DxComboBox Data="plcClasses" @bind-Value="@currentPLC" EditFormat="{0}:{1} ({2})" >
+			<Columns>
+				<DxListEditorColumn FieldName="@nameof(PLCClass.ip)"
+									Caption="ip"/>
+				<DxListEditorColumn FieldName="@nameof(PLCClass.port)"
+									Caption="port" />
+				<DxListEditorColumn FieldName="@nameof(PLCClass.name)"
+									Caption="name" />
+			</Columns>
+		</DxComboBox>
+	</DxFormLayoutItem>
+	@if (currentPLC.tcpConnect)
+	{
+		<DxFormLayoutItem Caption="mx index" ColSpanLg="4" BeginRow="true">
+			<DxSpinEdit @bind-Value = "@index"></DxSpinEdit>
+		</DxFormLayoutItem>
+	}
+	@if (currentPLC.tcpConnect)
+	{
+		<DxFormLayoutGroup Caption="Set/Write" ColSpanMd="12">
+			<DxFormLayoutItem Caption="Value" ColSpanLg="4" BeginRow="true">
+				<DxCheckBox @bind-Checked="@input"></DxCheckBox>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<DxButton Text="Set" Click="@Set"></DxButton>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Set Success" ColSpanLg="4" BeginRow="true">
+				<DxCheckBox @bind-Checked="@writeSuccess" Enabled="false"></DxCheckBox>
+			</DxFormLayoutItem>
+			
+			
+		</DxFormLayoutGroup>
+
+		<DxFormLayoutGroup Caption="Get/Read" ColSpanMd="12">
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<DxButton Text="Get" Click="@Get"></DxButton>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Value" ColSpanLg="4" BeginRow="true">
+				<DxCheckBox @bind-Checked="@output" Enabled="false"></DxCheckBox>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Get Success" ColSpanLg="4" BeginRow="true">
+				<DxCheckBox @bind-Checked="@readSuccess" Enabled="false"></DxCheckBox>
+			</DxFormLayoutItem>
+		</DxFormLayoutGroup>
+	}
+</DxFormLayout>
+
+@code {
+	private IEnumerable<PLCClass> plcClasses;
+	private PLCClass currentPLC;
+
+	private ushort index = 0;
+
+	private bool input = false;
+	private bool writeSuccess = false;
+
+	private bool output = false;
+	private bool readSuccess = false;
+
+
+
+
+	protected override Task OnInitializedAsync()
+	{
+		plcClasses = dataBufferService.GetPLCClasses();
+		currentPLC = plcClasses.First();
+		return base.OnInitializedAsync();
+	}
+
+	private async Task Set()
+	{
+		writeSuccess = false;
+		writeSuccess = await currentPLC.WriteSingleM_MX(index, input);
+	}
+
+	private async Task Get()
+	{
+		readSuccess = false;
+		(bool, bool) res = await currentPLC.ReadSingleM_MX(index);
+		output = res.Item1;
+		readSuccess = res.Item2;
+	}
+}

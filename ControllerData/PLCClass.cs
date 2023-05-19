@@ -3,6 +3,7 @@ using DevExpress.ClipboardSource.SpreadsheetML;
 using DevExpress.Pdf.Native.BouncyCastle.Utilities.Net;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace AGVServer.Data
 {
@@ -55,8 +56,10 @@ namespace AGVServer.Data
 						{
 							mxIndex = (ushort)type.MxIndex,
 							modbusIndex = (ushort)(this.startIndex + (ushort)type.Offset),
-							vlaue = false,
-							alive = false,
+							modbusValue = false,
+							mxValue = false,
+							mxSuccessWrite = false,
+							mxSuccessRead = false,
 						});
 					}
 
@@ -71,8 +74,9 @@ namespace AGVServer.Data
 		{
 			foreach (PLCValueTable plcValueTable in valueTables)
 			{
-				plcValueTable.vlaue = false;
-				plcValueTable.alive = false;
+				plcValueTable.mxValue = false;
+				plcValueTable.mxSuccessWrite = false;
+				plcValueTable.mxSuccessRead = false;
 			}
 		}
 
@@ -110,12 +114,12 @@ namespace AGVServer.Data
 			}
 			return Task.CompletedTask;
 		}
-		public Task<(bool, bool)> ReadSingleM_MX(ushort index)//return (value, no error flag)
+		public async Task<(bool, bool)> ReadSingleM_MX(ushort index)//return (value, no error -> true)
 		{
-			byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0c, 0x00, 0x04, 0x00, };
+			byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0c, 0x00, 0x00, 0x00, };
 			byte[] cmd = { 0x01, 0x04, };
 			byte[] subCmd = { 0x01, 0x00, };
-			byte[] mxIndex = BitConverter.GetBytes(index).Concat(new byte[]{0x00}).ToArray();
+			byte[] mxIndex = BitConverter.GetBytes(index).Concat(new byte[] { 0x00 }).ToArray();
 			byte[] device = { 0x90, };
 			byte[] points = { 0x02, 0x00 };
 			byte[] strSend = header.Concat(cmd).Concat(subCmd).Concat(mxIndex).Concat(device).Concat(points).ToArray();
@@ -123,31 +127,109 @@ namespace AGVServer.Data
 			try
 			{
 				NetworkStream nwStream = tcpClient.GetStream();
+				while (!nwStream.CanWrite)
+				{
+					await Task.Delay(10);
+				}
 				nwStream.Write(strSend, 0, strSend.Length);
 				byte[] res = new byte[12];//11 + 1
+				while (!nwStream.CanRead)
+				{
+					await Task.Delay(10);
+				}
 				nwStream.Read(res, 0, res.Length);
 				if (res[9] == 0 && res[10] == 0)
 				{
 					string returnByteString = res[11].ToString("x2");
 					if (returnByteString[0] == '0')
 					{
-						return Task.FromResult((false, true));
+						return (false, true);
 					}
 					else
 					{
-						return Task.FromResult((true, true));
+						return (true, true);
 					}
 				}
 				else
 				{
-					return Task.FromResult((false, false));
+					return (false, false);
 				}
 			}
 			catch (Exception ex)
 			{
-				return Task.FromResult((false, false));
+				return (false, false);
 			}
 		}
-		
+
+		public async Task<bool> WriteSingleM_MX(ushort index, bool val)//success write or not
+		{
+			(bool, bool) nextCoil = await ReadSingleM_MX((ushort)(index + 1));
+			if (!nextCoil.Item2)
+			{
+				return false;
+			}
+			else
+			{
+				byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0d, 0x00, 0x00, 0x00, };
+				byte[] cmd = { 0x01, 0x14, };
+				byte[] subCmd = { 0x01, 0x00, };
+				byte[] mxIndex = BitConverter.GetBytes(index).Concat(new byte[] { 0x00 }).ToArray();
+				byte[] device = { 0x90, };
+				byte[] points = { 0x02, 0x00 };
+				byte[] inputVal;
+				if (nextCoil.Item1) //X1
+				{
+					if (val)
+					{
+						inputVal = new byte[] { 0x11, };
+					}
+					else
+					{
+						inputVal = new byte[] { 0x01, };
+					}
+				}
+				else //X0
+				{
+					if (val)
+					{
+						inputVal = new byte[] { 0x10, };
+					}
+					else
+					{
+						inputVal = new byte[] { 0x00, };
+					}
+				}
+				byte[] strSend = header.Concat(cmd).Concat(subCmd).Concat(mxIndex).Concat(device).Concat(points).Concat(inputVal).ToArray();
+
+				try
+				{
+					NetworkStream nwStream = tcpClient.GetStream();
+					nwStream.Write(strSend, 0, strSend.Length);
+					byte[] res = new byte[11];//fixed 11
+					nwStream.Read(res, 0, res.Length);
+					if (res[9] == 0 && res[10] == 0)
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				catch (Exception ex)
+				{
+					return false;
+				}
+			}
+		}
+
+		public void SelfCheck()
+		{
+			int failCount = valueTables.Count(x => x.mxSuccessRead);
+			if (failCount == 0)
+			{
+				TryDisconnect();
+			}
+		}
 	}
 }
