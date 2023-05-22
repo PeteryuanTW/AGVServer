@@ -1,27 +1,64 @@
 ﻿@page "/MCPLCTesting"
 @inject DataBufferService dataBufferService
 
-<DxFormLayout>
-	<DxFormLayoutItem Caption="Name" ColSpanLg="4" BeginRow = "true">
-		<DxComboBox Data="plcClasses" @bind-Value="@currentPLC" EditFormat="{0}:{1} ({2})" >
-			<Columns>
-				<DxListEditorColumn FieldName="@nameof(PLCClass.ip)"
-									Caption="ip"/>
-				<DxListEditorColumn FieldName="@nameof(PLCClass.port)"
-									Caption="port" />
-				<DxListEditorColumn FieldName="@nameof(PLCClass.name)"
-									Caption="name" />
-			</Columns>
-		</DxComboBox>
-	</DxFormLayoutItem>
-	@if (currentPLC.tcpConnect)
-	{
-		<DxFormLayoutItem Caption="mx index" ColSpanLg="4" BeginRow="true">
-			<DxSpinEdit @bind-Value = "@index"></DxSpinEdit>
-		</DxFormLayoutItem>
-	}
-	@if (currentPLC.tcpConnect)
-	{
+<DxTabs ActiveTabIndex="@activeTabIndex" ActiveTabIndexChanged="@OnActiveTabChanged">
+	<DxTab Text="Online Testing"></DxTab>
+	<DxTab Text="New Connection Testing"></DxTab>
+</DxTabs>
+@switch (activeTabIndex)
+{
+	case 0:
+		<DxFormLayout>
+			<DxFormLayoutGroup>
+				<DxFormLayoutItem Caption="Name" ColSpanLg="4" BeginRow="true">
+					<DxComboBox Data="plcClasses" @bind-Value="@currentPLC" EditFormat="{0}:{1} ({2})">
+						<Columns>
+							<DxListEditorColumn FieldName="@nameof(PLCClass.ip)"
+										Caption="ip" />
+							<DxListEditorColumn FieldName="@nameof(PLCClass.port)"
+										Caption="port" />
+							<DxListEditorColumn FieldName="@nameof(PLCClass.name)"
+										Caption="name" />
+						</Columns>
+					</DxComboBox>
+				</DxFormLayoutItem>
+				@if (currentPLC.tcpConnect)
+				{
+					<DxFormLayoutItem Caption="mx index" ColSpanLg="4" BeginRow="true">
+						<DxSpinEdit @bind-Value="@index"></DxSpinEdit>
+					</DxFormLayoutItem>
+				}
+			</DxFormLayoutGroup>
+		</DxFormLayout>
+		break;
+	case 1:
+		<DxFormLayout>
+			<DxFormLayoutGroup>
+				<DxFormLayoutItem Caption="IP" ColSpanLg="4" BeginRow="true">
+					<DxTextBox @bind-Text="@currentPLC.ip"></DxTextBox>
+				</DxFormLayoutItem>
+				<DxFormLayoutItem Caption="port" ColSpanLg="4" BeginRow="true">
+					<DxSpinEdit @bind-Value="@currentPLC.port"></DxSpinEdit>
+				</DxFormLayoutItem>
+				<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+					<DxButton Text="TCP Connect" Click="@currentPLC.TryConnectTcp"></DxButton>
+				</DxFormLayoutItem>
+				@if (currentPLC.tcpConnect)
+				{
+					<DxFormLayoutItem Caption="mx index" ColSpanLg="6" BeginRow="true">
+						<DxSpinEdit @bind-Value="@index"></DxSpinEdit>
+					</DxFormLayoutItem>
+				}
+			</DxFormLayoutGroup>
+		</DxFormLayout>
+		break;
+	default:
+		break;
+}
+
+@if (currentPLC.tcpConnect)
+{
+	<DxFormLayout>
 		<DxFormLayoutGroup Caption="Set/Write" ColSpanMd="12">
 			<DxFormLayoutItem Caption="Value" ColSpanLg="4" BeginRow="true">
 				<DxCheckBox @bind-Checked="@input"></DxCheckBox>
@@ -32,8 +69,6 @@
 			<DxFormLayoutItem Caption="Set Success" ColSpanLg="4" BeginRow="true">
 				<DxCheckBox @bind-Checked="@writeSuccess" Enabled="false"></DxCheckBox>
 			</DxFormLayoutItem>
-			
-			
 		</DxFormLayoutGroup>
 
 		<DxFormLayoutGroup Caption="Get/Read" ColSpanMd="12">
@@ -47,10 +82,15 @@
 				<DxCheckBox @bind-Checked="@readSuccess" Enabled="false"></DxCheckBox>
 			</DxFormLayoutItem>
 		</DxFormLayoutGroup>
-	}
-</DxFormLayout>
+	</DxFormLayout>
+}
+
 
 @code {
+
+	private int activeTabIndex = 0;
+
+
 	private IEnumerable<PLCClass> plcClasses;
 	private PLCClass currentPLC;
 
@@ -70,6 +110,25 @@
 		plcClasses = dataBufferService.GetPLCClasses();
 		currentPLC = plcClasses.First();
 		return base.OnInitializedAsync();
+	}
+
+	private void OnActiveTabChanged(int activeTab)
+	{
+		activeTabIndex = activeTab;
+		switch (activeTabIndex)
+		{
+			case 0:
+				plcClasses = dataBufferService.GetPLCClasses();
+				currentPLC = plcClasses.First();
+				index = 0;
+				break;
+			case 1:
+				currentPLC = new PLCClass();
+				index = 0;
+				break;
+			default:
+				break;
+		}
 	}
 
 	private async Task Set()

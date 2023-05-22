@@ -177,11 +177,10 @@ namespace AGVServer.Service
 							mxModbusIndex.mxSuccessWrite = await plcClass.WriteSingleM_MX(mxModbusIndex.mxIndex, valFromModbus);
 
 							(bool, bool) readReturnVal = await plcClass.ReadSingleM_MX(mxModbusIndex.mxIndex);
-							//Console.WriteLine("check mx[" + mxModbusIndex.mxIndex + "] is " + readReturnVal.Item1.ToString()+"("+ readReturnVal .Item2+ ")");
+
 							mxModbusIndex.mxValue = readReturnVal.Item1;
 							mxModbusIndex.mxSuccessRead = readReturnVal.Item2;
 						}
-						//Console.WriteLine("=====" + DateTime.Now + "=====");
 						plcClass.SelfCheck();
 					}
 				}

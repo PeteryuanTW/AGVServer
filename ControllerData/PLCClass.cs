@@ -28,10 +28,10 @@ namespace AGVServer.Data
 			{
 				switch (tmp_ip.AddressFamily)
 				{
-					case System.Net.Sockets.AddressFamily.InterNetwork:
+					case AddressFamily.InterNetwork:
 						ip = plcconfig.Ip;
 						break;
-					case System.Net.Sockets.AddressFamily.InterNetworkV6:
+					case AddressFamily.InterNetworkV6:
 						break;
 					default:
 						break;
@@ -68,6 +68,11 @@ namespace AGVServer.Data
 
 			this.keepUpdate = plcconfig.Enabled;
 			tryingConnect = false;
+		}
+
+		public PLCClass()
+		{
+			tcpConnect = false;
 		}
 
 		public void ResetValueTables()
@@ -161,15 +166,71 @@ namespace AGVServer.Data
 			}
 		}
 
+
+		public async Task<(bool, bool, bool)> ReadPairM_MX(ushort index)//return (value, next value, no errot -> true)
+		{
+			byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0c, 0x00, 0x00, 0x00, };
+			byte[] cmd = { 0x01, 0x04, };
+			byte[] subCmd = { 0x01, 0x00, };
+			byte[] mxIndex = BitConverter.GetBytes(index).Concat(new byte[] { 0x00 }).ToArray();
+			byte[] device = { 0x90, };
+			byte[] points = { 0x02, 0x00 };
+			byte[] strSend = header.Concat(cmd).Concat(subCmd).Concat(mxIndex).Concat(device).Concat(points).ToArray();
+
+			try
+			{
+				NetworkStream nwStream = tcpClient.GetStream();
+				while (!nwStream.CanWrite)
+				{
+					await Task.Delay(10);
+				}
+				nwStream.Write(strSend, 0, strSend.Length);
+				byte[] res = new byte[12];//11 + 1
+				while (!nwStream.CanRead)
+				{
+					await Task.Delay(10);
+				}
+				nwStream.Read(res, 0, res.Length);
+				if (res[9] == 0 && res[10] == 0)
+				{
+					string returnByteString = res[11].ToString("x2");
+					switch ((returnByteString[0], returnByteString[1]))
+					{
+						case ('0', '0'):
+							return (false, false, true);
+						case ('0', '1'):
+							return (false, true, true);
+						case ('1', '0'):
+							return (true, false, true);
+						case ('1', '1'):
+							return (true, true, true);
+						default:
+							return (false, false, false);
+					}
+				}
+				else
+				{
+					return (false, false, false);
+				}
+			}
+			catch (Exception ex)
+			{
+				return (false, false, false);
+			}
+		}
 		public async Task<bool> WriteSingleM_MX(ushort index, bool val)//success write or not
 		{
-			(bool, bool) nextCoil = await ReadSingleM_MX((ushort)(index + 1));
-			if (!nextCoil.Item2)
+			(bool, bool, bool) pairCoil = await ReadPairM_MX((ushort)(index));
+			if (!pairCoil.Item3)//read fail
 			{
 				return false;
 			}
 			else
 			{
+				if (pairCoil.Item1 == val)//no need to write
+				{
+					return true;
+				}
 				byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0d, 0x00, 0x00, 0x00, };
 				byte[] cmd = { 0x01, 0x14, };
 				byte[] subCmd = { 0x01, 0x00, };
@@ -177,7 +238,7 @@ namespace AGVServer.Data
 				byte[] device = { 0x90, };
 				byte[] points = { 0x02, 0x00 };
 				byte[] inputVal;
-				if (nextCoil.Item1) //X1
+				if (pairCoil.Item2) //X1
 				{
 					if (val)
 					{

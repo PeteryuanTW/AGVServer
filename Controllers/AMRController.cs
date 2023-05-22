@@ -23,10 +23,19 @@ namespace AGVServer.Controllers
 			return Ok(dataBufferService.GetAMRstatusList());
 		}
 		[HttpGet]
-		[Route("[action]")]
+		[Route("[action]/{AMRID}")]
 		public ActionResult<AMRStatus> GetAMRStatusByID([FromRoute] string AMRID)
 		{
-			return Ok(dataBufferService.GetAMRstatusList().First(x=>x.robot_id == AMRID));
+			AMRStatus res = dataBufferService.GetAMRstatusList().Find(x => x.robot_id == AMRID);
+			if (res != null)
+			{
+				return Ok(res);
+			}
+			else
+			{
+				return new EmptyResult();
+			}
+			
 		}
 	}
 }

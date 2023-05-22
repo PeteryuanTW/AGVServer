@@ -27,13 +27,13 @@ namespace AGVServer.Controllers
 			return Ok(dataBufferService.GetTasks());
 		}
 		[HttpGet]
-		[Route("[action]")]
+		[Route("[action]/{TaskID}")]
 		public ActionResult<MesTask> GetTaskByID([FromRoute] string TaskID)
 		{
 			return Ok(dataBufferService.GetTasksByNO(TaskID));
 		}
 		[HttpGet]
-		[Route("[action]")]
+		[Route("[action]/{barcodeRes}")]
 		public ActionResult<bool> CheckSequenceNumInTask([FromRoute] string barcodeRes)
 		{
 			return Ok(true);
@@ -51,8 +51,8 @@ namespace AGVServer.Controllers
 			return Ok();
 		}
 		[HttpPost]
-		[Route("[action]")]
-		public ActionResult AssignTaskToAMR([FromRoute] MesTask mesTask, [FromRoute] string amrID)
+		[Route("[action]/{amrID}")]
+		public ActionResult AssignTaskToAMR([FromBody] MesTask mesTask, [FromRoute] string amrID)
 		{
 			return Ok();
 		}
@@ -62,7 +62,7 @@ namespace AGVServer.Controllers
 
 		#region Put
 		[HttpPut]
-		[Route("[action]")]
+		[Route("[action]/{taskNO}/{status}")]
 		public ActionResult UpdateTaskStatus([FromRoute] string taskNO, [FromRoute] string status)
 		{
 			return Ok();
@@ -72,8 +72,8 @@ namespace AGVServer.Controllers
 
 		#region Delete
 		[HttpDelete]
-		[Route("[action]")]
-		public ActionResult RemoveTaskByID([FromQuery] string TaskID)
+		[Route("[action]/{TaskID}")]
+		public ActionResult RemoveTaskByID([FromRoute] string TaskID)
 		{
 			return Ok();
 		}

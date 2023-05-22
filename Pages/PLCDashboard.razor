@@ -1,7 +1,7 @@
 ﻿@page "/PLCDashboard"
 @inject DataBufferService dataBufferService
 
-<DxGrid Data="@plcClasses">
+<DxGrid PopupEditFormHeaderText="@currentIP" Data="@plcClasses" CustomizeEditModel="@OnEdit" EditModelSaving="@OnEditSave" EditMode="@GridEditMode.PopupEditForm">
 	<Columns>
 		<DxGridDataColumn FieldName="ip">
 			<CellDisplayTemplate>
@@ -33,7 +33,15 @@
 				<DxCheckBox Checked="@((bool)context.Value)" CheckType=CheckType.Switch Enabled="false"></DxCheckBox>
 			</CellDisplayTemplate>
 		</DxGridDataColumn>
+		<DxGridCommandColumn NewButtonVisible="false" EditButtonVisible="true" DeleteButtonVisible="false"/>
 	</Columns>
+	<EditFormTemplate  Context="EditFormContext" >
+		<DxFormLayout>
+			<DxFormLayoutItem Caption="Keep Updating" ColSpanMd="6">
+				<DxCheckBox @bind-Checked="@keepUpdatingFlag" CheckType="CheckType.Switch" />
+			</DxFormLayoutItem>
+		</DxFormLayout>
+	</EditFormTemplate>
 	<DetailRowTemplate>
 		<MXModbusTable PLCValueTables="((PLCClass)context.DataItem).valueTables" />
 	</DetailRowTemplate>
@@ -41,15 +49,18 @@
 
 @code {
 
+	private DxGrid PLCGrid;
+
 	private IEnumerable<PLCClass> plcClasses;
-	private PLCClass currentPLC;
+
+	private string currentIP;
+	private bool keepUpdatingFlag;
 
 
 
 	protected override Task OnInitializedAsync()
 	{
 		plcClasses = dataBufferService.GetPLCClasses().ToList();
-		currentPLC = plcClasses.First();
 		dataBufferService.PLCClassesChangeAct += PLCDataChange;
 		return base.OnInitializedAsync();
 	}
@@ -61,5 +72,19 @@
 			plcClasses = newPLCClasses;
 			StateHasChanged();
 		});
+	}
+
+	private void OnEdit(GridCustomizeEditModelEventArgs e)
+	{
+		keepUpdatingFlag = ((PLCClass)e.EditModel).keepUpdate;
+		currentIP = ((PLCClass)e.EditModel).ip;
+	}
+	private void OnEditSave(GridEditModelSavingEventArgs e)
+	{
+		PLCClass target = plcClasses.FirstOrDefault(x => x.ip == ((PLCClass)e.EditModel).ip);
+		if (target != null)
+		{
+			target.keepUpdate = keepUpdatingFlag;
+		}
 	}
 }
