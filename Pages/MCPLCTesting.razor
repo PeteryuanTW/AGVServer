@@ -22,7 +22,7 @@
 						</Columns>
 					</DxComboBox>
 				</DxFormLayoutItem>
-				@if (currentPLC!= null && currentPLC.tcpConnect)
+				@if (currentPLC != null && currentPLC.tcpConnect)
 				{
 					<DxFormLayoutItem Caption="mxindex" ColSpanLg="4" BeginRow="true">
 						<DxSpinEdit @bind-Value="@index"></DxSpinEdit>
@@ -40,9 +40,19 @@
 				<DxFormLayoutItem Caption="port" ColSpanLg="4" BeginRow="true">
 					<DxSpinEdit @bind-Value="@currentPLC.port"></DxSpinEdit>
 				</DxFormLayoutItem>
-				<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
-					<DxButton Text="TCP Connect" Click="@currentPLC.TryConnectTcp"></DxButton>
-				</DxFormLayoutItem>
+				@if (!currentPLC.tcpConnect)
+				{
+					<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+						<DxButton Text="TCP Connect" Click="@currentPLC.TryConnectTcp"></DxButton>
+					</DxFormLayoutItem>
+				}
+				else
+				{
+					<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+						<DxButton Text="TCP Disconnect" Click="@currentPLC.TryDisconnect"></DxButton>
+					</DxFormLayoutItem>
+				}
+
 				@if (currentPLC.tcpConnect)
 				{
 					<DxFormLayoutItem Caption="mx index" ColSpanLg="6" BeginRow="true">
@@ -56,7 +66,7 @@
 		break;
 }
 
-@if (currentPLC!= null && currentPLC.tcpConnect)
+@if (currentPLC != null && currentPLC.tcpConnect)
 {
 	<DxFormLayout>
 		<DxFormLayoutGroup Caption="Get/Read" ColSpanMd="6">
@@ -64,7 +74,7 @@
 				<DxButton Text="Get" Click="@Get"></DxButton>
 			</DxFormLayoutItem>
 			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
-				<DxTimeEdit  @bind-Time="@getSendTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
+				<DxTimeEdit @bind-Time="@getSendTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
 			</DxFormLayoutItem>
 			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
 				<div>~~~~~~~~~~~~~~~~~~~~</div>

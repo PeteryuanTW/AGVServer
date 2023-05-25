@@ -78,6 +78,10 @@ namespace AGVServer.Data
 
 		public void ResetValueTables()
 		{
+			if (valueTables == null || valueTables.Count == 0)
+			{
+				return;
+			}
 			foreach (PLCValueTable plcValueTable in valueTables)
 			{
 				plcValueTable.mxValue = false;
@@ -93,12 +97,13 @@ namespace AGVServer.Data
 			{
 				tcpClient = new TcpClient();
 				await tcpClient.ConnectAsync(ip, port);
+				Console.WriteLine("success connect to " + ip + ":" + port);
 				tcpConnect = true;
 			}
 			catch (Exception ex)
 			{
 				tcpConnect = false;
-				Console.WriteLine(ex.ToString());
+				Console.WriteLine("try connect to "+ip+":"+port+" fail");
 			}
 			tryingConnect = false;
 
@@ -133,18 +138,21 @@ namespace AGVServer.Data
 			try
 			{
 				NetworkStream nwStream = tcpClient.GetStream();
+				nwStream.WriteTimeout = 1000;
+				nwStream.ReadTimeout = 1000;
+
 				while (!nwStream.CanWrite)
 				{
 					await Task.Delay(10);
 				}
-				nwStream.Write(strSend, 0, strSend.Length);
+				
+				await nwStream.WriteAsync(strSend, 0, strSend.Length);
 				byte[] res = new byte[12];//11 + 1
 				while (!nwStream.CanRead)
 				{
 					await Task.Delay(10);
 				}
-				nwStream.ReadTimeout = 1000;
-				nwStream.Read(res, 0, res.Length);
+				await nwStream.ReadAsync(res, 0, res.Length);
 
 				Console.Write("Read at " + DateTime.Now.ToString("tt hh:mm:ss.fff")+":");
 				foreach (var a in res)
@@ -152,6 +160,7 @@ namespace AGVServer.Data
 					Console.Write(a.ToString("x")+" ");
 				}
 				Console.WriteLine();
+				
 				if (res[9] == 0 && res[10] == 0)
 				{
 					string returnByteString = res[11].ToString("x2");
@@ -189,17 +198,20 @@ namespace AGVServer.Data
 			try
 			{
 				NetworkStream nwStream = tcpClient.GetStream();
+				nwStream.ReadTimeout = 1000;
+				nwStream.WriteTimeout = 1000;
+
 				while (!nwStream.CanWrite)
 				{
 					await Task.Delay(10);
 				}
-				nwStream.Write(strSend, 0, strSend.Length);
+				await nwStream.WriteAsync(strSend, 0, strSend.Length);
 				byte[] res = new byte[12];//11 + 1
 				while (!nwStream.CanRead)
 				{
 					await Task.Delay(10);
 				}
-				nwStream.Read(res, 0, res.Length);
+				await nwStream.ReadAsync(res, 0, res.Length);
 				if (res[9] == 0 && res[10] == 0)
 				{
 					string returnByteString = res[11].ToString("x2");
@@ -274,9 +286,12 @@ namespace AGVServer.Data
 				try
 				{
 					NetworkStream nwStream = tcpClient.GetStream();
-					nwStream.Write(strSend, 0, strSend.Length);
+					nwStream.WriteTimeout = 1000;
+					nwStream.ReadTimeout = 1000;
+
+					await nwStream.WriteAsync(strSend, 0, strSend.Length);
 					byte[] res = new byte[11];//fixed 11
-					nwStream.Read(res, 0, res.Length);
+					await nwStream.ReadAsync(res, 0, res.Length);
 					Console.Write("Write at " + DateTime.Now.ToString("tt hh:mm:ss.fff")+" ");
 					foreach (var a in res)
 					{
