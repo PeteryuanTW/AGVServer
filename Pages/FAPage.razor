@@ -4,12 +4,66 @@
 @inject DataBufferService dataBufferService
 @inject NavigationManager navigationManager
 
-@foreach (AMRStatus status in _AMRStatuses)
-{
-	<div style="width:30%">
-		<AMRComponent status="@status"></AMRComponent>
-	</div>
-}
+<style>
+	.highlighted-item > td {
+		background-color: rgba(245, 198, 203, 0.5);
+	}
+</style>
+
+<DxGrid Data="@_AMRStatuses" UnboundColumnData="Grid_CustomUnboundColumnData" CustomizeElement="Grid_CustomizeElement">
+	<Columns>
+		<DxGridDataColumn FieldName="robot_id">
+			@*
+			<CellDisplayTemplate>
+			<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
+			</CellDisplayTemplate>*@
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="robot_name">
+			@*
+			<CellDisplayTemplate>
+			<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
+			</CellDisplayTemplate>*@
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="task_id">
+			@*
+			<CellDisplayTemplate>
+			<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
+			</CellDisplayTemplate>*@
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="ModeString" Caption="mode"
+						  UnboundType="GridUnboundColumnType.String">
+			@*<CellDisplayTemplate>
+			<DxTextBox Text="@GetModeString((int)context.Value)" ReadOnly="true"></DxTextBox>
+			<DxSpinEdit Value="@((int)context.Value)" ReadOnly="true"></DxSpinEdit>
+			</CellDisplayTemplate>*@
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="battery_percent" DisplayFormat="{0}%">
+			@*<CellDisplayTemplate>
+			<DxSpinEdit Value="@((int)context.Value)" Mask ="P0" ReadOnly="true"></DxSpinEdit>
+			</CellDisplayTemplate>*@
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="last_update_time" DisplayFormat="yyyy/MM/dd tt hh:mm:ss">
+			@*<CellDisplayTemplate>
+			<DxTimeEdit Time="@((DateTime)context.Value)" Mask="yyyy/MM/dd tt hh:mm:ss" ReadOnly="true"></DxTimeEdit>
+			</CellDisplayTemplate>*@
+		</DxGridDataColumn>
+		@*		<DxGridDataColumn FieldName="position_x">
+		<CellDisplayTemplate>
+		<DxSpinEdit Value="@((double)context.Value)" ReadOnly="true"></DxSpinEdit>
+		</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="position_y">
+		<CellDisplayTemplate>
+		<DxSpinEdit Value="@((double)context.Value)" ReadOnly="true"></DxSpinEdit>
+		</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="position_yaw">
+		<CellDisplayTemplate>
+		<DxSpinEdit Value="@((double)context.Value)" ReadOnly="true"></DxSpinEdit>
+		</CellDisplayTemplate>
+		</DxGridDataColumn>*@
+	</Columns>
+</DxGrid>
 
 
 
@@ -19,7 +73,7 @@
 	private IEnumerable<AMRStatus> _AMRStatuses;
 	protected override Task OnInitializedAsync()
 	{
-		_AMRStatuses = dataBufferService.GetAMRstatusList().OrderBy(x=>x.robot_id);
+		_AMRStatuses = dataBufferService.GetAMRstatusList().OrderBy(x => x.robot_id);
 		dataBufferService.AMRstatusListChangeAct += GetNewAMRStatus;
 
 		return base.OnInitializedAsync();
@@ -38,12 +92,68 @@
 				_AMRStatuses = newStatusList.OrderBy(x => x.robot_id).ToList();
 				StateHasChanged();
 			});
-			
+
 		}
 		catch (Exception e)
 		{
 			Console.WriteLine(e);
 		}
 		//return Task.CompletedTask;
+	}
+
+	private string GetModeString(int modeBit)
+	{
+		string modeString = "";
+		switch (modeBit)
+		{
+			case 0:
+				modeString = "Idle";
+				break;
+			case 1:
+				modeString = "Charging";
+				break;
+			case 2:
+				modeString = "Moving";
+				break;
+			case 3:
+				modeString = "Paused";
+				break;
+			case 4:
+				modeString = "Waiting";
+				break;
+			case 5:
+				modeString = "Emergency";
+				break;
+			case 6:
+				modeString = "Going Home";
+				break;
+			case 7:
+				modeString = "Docking";
+				break;
+			case 8:
+				modeString = "Uninitialized";
+				break;
+			default:
+				modeString = "disconnect";
+				break;
+		}
+		return modeString;
+	}
+
+	void Grid_CustomUnboundColumnData(GridUnboundColumnDataEventArgs e)
+	{
+		if (e.FieldName == "ModeString")
+		{
+			int tmp = Convert.ToInt32(e.GetRowValue("mode"));
+			e.Value = GetModeString(tmp);
+		}
+	}
+
+	void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+	{
+		if (e.ElementType == GridElementType.DataRow && (int)e.Grid.GetRowValue(e.VisibleIndex, "mode") != 10)
+		{
+			e.CssClass = "highlighted-item";
+		}
 	}
 }

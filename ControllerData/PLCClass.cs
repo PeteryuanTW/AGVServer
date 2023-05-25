@@ -1,6 +1,7 @@
 ﻿using AGVServer.EFModels;
 using DevExpress.ClipboardSource.SpreadsheetML;
 using DevExpress.Pdf.Native.BouncyCastle.Utilities.Net;
+using Microsoft.VisualBasic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -142,7 +143,15 @@ namespace AGVServer.Data
 				{
 					await Task.Delay(10);
 				}
+				nwStream.ReadTimeout = 1000;
 				nwStream.Read(res, 0, res.Length);
+
+				Console.Write("Read at " + DateTime.Now.ToString("tt hh:mm:ss.fff")+":");
+				foreach (var a in res)
+				{
+					Console.Write(a.ToString("x")+" ");
+				}
+				Console.WriteLine();
 				if (res[9] == 0 && res[10] == 0)
 				{
 					string returnByteString = res[11].ToString("x2");
@@ -268,6 +277,11 @@ namespace AGVServer.Data
 					nwStream.Write(strSend, 0, strSend.Length);
 					byte[] res = new byte[11];//fixed 11
 					nwStream.Read(res, 0, res.Length);
+					Console.Write("Write at " + DateTime.Now.ToString("tt hh:mm:ss.fff")+" ");
+					foreach (var a in res)
+					{
+						Console.Write(a);
+					}
 					if (res[9] == 0 && res[10] == 0)
 					{
 						return true;

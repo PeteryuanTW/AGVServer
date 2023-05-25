@@ -22,9 +22,9 @@
 						</Columns>
 					</DxComboBox>
 				</DxFormLayoutItem>
-				@if (currentPLC.tcpConnect)
+				@if (currentPLC!= null && currentPLC.tcpConnect)
 				{
-					<DxFormLayoutItem Caption="mx index" ColSpanLg="4" BeginRow="true">
+					<DxFormLayoutItem Caption="mxindex" ColSpanLg="4" BeginRow="true">
 						<DxSpinEdit @bind-Value="@index"></DxSpinEdit>
 					</DxFormLayoutItem>
 				}
@@ -56,30 +56,48 @@
 		break;
 }
 
-@if (currentPLC.tcpConnect)
+@if (currentPLC!= null && currentPLC.tcpConnect)
 {
 	<DxFormLayout>
-		<DxFormLayoutGroup Caption="Set/Write" ColSpanMd="12">
-			<DxFormLayoutItem Caption="Value" ColSpanLg="4" BeginRow="true">
-				<DxCheckBox @bind-Checked="@input"></DxCheckBox>
-			</DxFormLayoutItem>
-			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
-				<DxButton Text="Set" Click="@Set"></DxButton>
-			</DxFormLayoutItem>
-			<DxFormLayoutItem Caption="Set Success" ColSpanLg="4" BeginRow="true">
-				<DxCheckBox @bind-Checked="@writeSuccess" Enabled="false"></DxCheckBox>
-			</DxFormLayoutItem>
-		</DxFormLayoutGroup>
-
-		<DxFormLayoutGroup Caption="Get/Read" ColSpanMd="12">
+		<DxFormLayoutGroup Caption="Get/Read" ColSpanMd="6">
 			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
 				<DxButton Text="Get" Click="@Get"></DxButton>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<DxTimeEdit  @bind-Time="@getSendTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<div>~~~~~~~~~~~~~~~~~~~~</div>
 			</DxFormLayoutItem>
 			<DxFormLayoutItem Caption="Value" ColSpanLg="4" BeginRow="true">
 				<DxCheckBox @bind-Checked="@output" Enabled="false"></DxCheckBox>
 			</DxFormLayoutItem>
 			<DxFormLayoutItem Caption="Get Success" ColSpanLg="4" BeginRow="true">
 				<DxCheckBox @bind-Checked="@readSuccess" Enabled="false"></DxCheckBox>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<DxTimeEdit @bind-Time="@getReceivedTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
+			</DxFormLayoutItem>
+		</DxFormLayoutGroup>
+
+		<DxFormLayoutGroup Caption="Set/Write" ColSpanMd="6">
+			<DxFormLayoutItem Caption="Value" ColSpanLg="4" BeginRow="true">
+				<DxCheckBox @bind-Checked="@input"></DxCheckBox>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<DxButton Text="Set" Click="@Set"></DxButton>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<DxTimeEdit @bind-Time="@setSendTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<div>~~~~~~~~~~~~~~~~~~~~</div>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem Caption="Set Success" ColSpanLg="4" BeginRow="true">
+				<DxCheckBox @bind-Checked="@writeSuccess" Enabled="false"></DxCheckBox>
+			</DxFormLayoutItem>
+			<DxFormLayoutItem ColSpanLg="4" BeginRow="true">
+				<DxTimeEdit @bind-Time="@setReceivedTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
 			</DxFormLayoutItem>
 		</DxFormLayoutGroup>
 	</DxFormLayout>
@@ -98,6 +116,13 @@
 
 	private bool input = false;
 	private bool writeSuccess = false;
+	private DateTime getSendTime;
+	private DateTime getReceivedTime;
+	private DateTime setSendTime;
+	private DateTime setReceivedTime;
+
+
+
 
 	private bool output = false;
 	private bool readSuccess = false;
@@ -108,7 +133,7 @@
 	protected override Task OnInitializedAsync()
 	{
 		plcClasses = dataBufferService.GetPLCClasses();
-		currentPLC = plcClasses.First();
+		//currentPLC = plcClasses.First();
 		return base.OnInitializedAsync();
 	}
 
@@ -118,8 +143,15 @@
 		switch (activeTabIndex)
 		{
 			case 0:
-				plcClasses = dataBufferService.GetPLCClasses();
-				currentPLC = plcClasses.First();
+				//plcClasses = dataBufferService.GetPLCClasses();
+				if (plcClasses.Count() > 0)
+				{
+					currentPLC = plcClasses.First();
+				}
+				else
+				{
+					currentPLC = null;
+				}
 				index = 0;
 				break;
 			case 1:
@@ -134,14 +166,18 @@
 	private async Task Set()
 	{
 		writeSuccess = false;
+		setSendTime = DateTime.Now;
 		writeSuccess = await currentPLC.WriteSingleM_MX(index, input);
+		setReceivedTime = DateTime.Now;
 	}
 
 	private async Task Get()
 	{
 		readSuccess = false;
+		getSendTime = DateTime.Now;
 		(bool, bool) res = await currentPLC.ReadSingleM_MX(index);
 		output = res.Item1;
 		readSuccess = res.Item2;
+		getReceivedTime = DateTime.Now;
 	}
 }

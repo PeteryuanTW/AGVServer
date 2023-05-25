@@ -136,6 +136,10 @@ namespace AGVServer.Service
 		private List<AMRStatus> FARobotToAMRStatus(Robots robotsList, DateTime updateTime)
 		{
 			List<AMRStatus> res = new();
+			if (robotsList.robots == null)
+			{
+				return res;
+			}
 			foreach (Robot robot in robotsList.robots)
 			{
 				AMRStatus tmp = new AMRStatus(robot);
