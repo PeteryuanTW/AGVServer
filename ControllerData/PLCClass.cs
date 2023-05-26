@@ -135,6 +135,11 @@ namespace AGVServer.Data
 			byte[] points = { 0x02, 0x00 };
 			byte[] strSend = header.Concat(cmd).Concat(subCmd).Concat(mxIndex).Concat(device).Concat(points).ToArray();
 
+			foreach (var a in strSend)
+			{
+				Console.WriteLine(a.ToString("x")+ " ");
+			}
+
 			try
 			{
 				NetworkStream nwStream = tcpClient.GetStream();
@@ -319,6 +324,22 @@ namespace AGVServer.Data
 			if (failCount == 0)
 			{
 				TryDisconnect();
+			}
+		}
+
+		public async Task SendByteTest()
+		{
+			byte[] tmp = { 0x00, 0xff, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x58, 0x08, 0x00 };
+			NetworkStream nwStream = tcpClient.GetStream();
+			nwStream.WriteTimeout = 1000;
+			nwStream.ReadTimeout = 1000;
+
+			await nwStream.WriteAsync(tmp, 0, tmp.Length);
+			byte[] res = new byte[20];//fixed 11
+			await nwStream.ReadAsync(res, 0, res.Length);
+			foreach (var a in res)
+			{
+				Console.Write(a.ToString("x"));
 			}
 		}
 	}

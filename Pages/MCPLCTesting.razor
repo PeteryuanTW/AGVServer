@@ -110,6 +110,7 @@
 				<DxTimeEdit @bind-Time="@setReceivedTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
 			</DxFormLayoutItem>
 		</DxFormLayoutGroup>
+		<DxButton Text = "QQQ" Click="(async ()=>{await currentPLC.SendByteTest();})"></DxButton>
 	</DxFormLayout>
 }
 
