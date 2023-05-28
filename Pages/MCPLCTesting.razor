@@ -110,7 +110,6 @@
 				<DxTimeEdit @bind-Time="@setReceivedTime" Mask="tt hh:mm:ss.fff" ReadOnly="true"></DxTimeEdit>
 			</DxFormLayoutItem>
 		</DxFormLayoutGroup>
-		<DxButton Text = "QQQ" Click="(async ()=>{await currentPLC.SendByteTest();})"></DxButton>
 	</DxFormLayout>
 }
 
@@ -148,6 +147,11 @@
 		return base.OnInitializedAsync();
 	}
 
+	private void Dispose()
+	{
+		
+	}
+
 	private void OnActiveTabChanged(int activeTab)
 	{
 		activeTabIndex = activeTab;
@@ -178,7 +182,7 @@
 	{
 		writeSuccess = false;
 		setSendTime = DateTime.Now;
-		writeSuccess = await currentPLC.WriteSingleM_MX(index, input);
+		writeSuccess = await currentPLC.WriteSingleM_MC_1E(index, input);
 		setReceivedTime = DateTime.Now;
 	}
 
@@ -186,7 +190,7 @@
 	{
 		readSuccess = false;
 		getSendTime = DateTime.Now;
-		(bool, bool) res = await currentPLC.ReadSingleM_MX(index);
+		(bool, bool) res = await currentPLC.ReadSingleM_MC_1E(index);
 		output = res.Item1;
 		readSuccess = res.Item2;
 		getReceivedTime = DateTime.Now;

@@ -69,6 +69,8 @@ namespace AGVServer.EFModels
                 entity.Property(e => e.Offset)
                     .HasColumnType("numeric(18, 0)")
                     .HasColumnName("offset");
+
+                entity.Property(e => e.UpdateType).HasColumnName("updateType");
             });
 
             modelBuilder.Entity<Plcconfig>(entity =>

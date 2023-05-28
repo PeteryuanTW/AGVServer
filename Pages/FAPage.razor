@@ -140,7 +140,7 @@
 		return modeString;
 	}
 
-	void Grid_CustomUnboundColumnData(GridUnboundColumnDataEventArgs e)
+	private void Grid_CustomUnboundColumnData(GridUnboundColumnDataEventArgs e)
 	{
 		if (e.FieldName == "ModeString")
 		{
@@ -149,7 +149,7 @@
 		}
 	}
 
-	void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+	private void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
 	{
 		if (e.ElementType == GridElementType.DataRow && (int)e.Grid.GetRowValue(e.VisibleIndex, "mode") != 10)
 		{

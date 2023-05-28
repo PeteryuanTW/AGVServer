@@ -171,19 +171,53 @@ namespace AGVServer.Service
 					}
 					if (plcClass.tcpConnect)
 					{
-						//update modbus value to mx and plc class
+						//update modbus value to mx(or plc to modbus) and plc class
 						foreach (PLCValueTable mxModbusIndex in plcClass.valueTables)
 						{
-							bool[] res = await master.ReadCoilsAsync(1, mxModbusIndex.modbusIndex, 1);
-							bool valFromModbus = res[0];
-							mxModbusIndex.modbusValue = valFromModbus;
+							//1: plc update to modbus
+							if (mxModbusIndex.updateType)
+							{
+								(bool,bool) valFromPLC = await plcClass.ReadSingleM_MC_1E(mxModbusIndex.mxIndex);
+								if (!valFromPLC.Item2)
+								{
+									mxModbusIndex.mxValue = false;
+									mxModbusIndex.updateValueSuccess = false;
+								}
+								else
+								{
+									mxModbusIndex.mxValue = valFromPLC.Item1;
+									mxModbusIndex.mxSuccessRead = valFromPLC.Item2;
 
-							mxModbusIndex.mxSuccessWrite = await plcClass.WriteSingleM_MX(mxModbusIndex.mxIndex, valFromModbus);
+									bool[] modbusVals = await master.ReadCoilsAsync(1, mxModbusIndex.modbusIndex, 1);
+									bool modbusVal = modbusVals[0];
+									mxModbusIndex.modbusValue = modbusVal;
 
-							(bool, bool) readReturnVal = await plcClass.ReadSingleM_MX(mxModbusIndex.mxIndex);
+									if (modbusVal == valFromPLC.Item1)//no need to update
+									{
+										mxModbusIndex.updateValueSuccess = true;
+									}
+									else
+									{
+										await master.WriteSingleCoilAsync(1, mxModbusIndex.modbusIndex, valFromPLC.Item1);
+										mxModbusIndex.updateValueSuccess = true;
+									}
+								}
+							}
+							//0:modbus update to plc
+							else
+							{
+								bool[] res = await master.ReadCoilsAsync(1, mxModbusIndex.modbusIndex, 1);
+								bool valFromModbus = res[0];
+								mxModbusIndex.modbusValue = valFromModbus;
 
-							mxModbusIndex.mxValue = readReturnVal.Item1;
-							mxModbusIndex.mxSuccessRead = readReturnVal.Item2;
+								mxModbusIndex.updateValueSuccess = await plcClass.WriteSingleM_MC_1E(mxModbusIndex.mxIndex, valFromModbus);
+
+								(bool, bool) readReturnVal = await plcClass.ReadSingleM_MC_1E(mxModbusIndex.mxIndex);
+
+								mxModbusIndex.mxValue = readReturnVal.Item1;
+								mxModbusIndex.mxSuccessRead = readReturnVal.Item2;
+							}
+							
 						}
 						plcClass.SelfCheck();
 					}

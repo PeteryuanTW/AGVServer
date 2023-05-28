@@ -1,23 +1,27 @@
 ﻿@inject DataBufferService dataBufferService
+
+<style>
+	.modBusToPLC > td {
+		background-color: rgba(212, 247, 247, 0.5);
+	}
+
+	.PLCToModbus > td {
+		background-color: rgba(229, 255, 229, 0.5);
+	}
+</style>
+
 <div>@updateTime</div>
-<DxGrid Data="@PLCValueTables">
+<DxGrid Data="@PLCValueTables" UnboundColumnData="@SetUpdateDirectionColumn" CustomizeElement="UpdateType">
 	<Columns>
-		<DxGridDataColumn FieldName="modbusIndex">
-			<CellDisplayTemplate>
-				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="modbusIndex"/>
 		<DxGridDataColumn FieldName="modbusValue">
 			<CellDisplayTemplate>
 				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
 			</CellDisplayTemplate>
 		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="mxIndex">
-			<CellDisplayTemplate>
-				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="mxSuccessWrite">
+		<DxGridDataColumn FieldName="updateDirection" UnboundType="GridUnboundColumnType.String"/>
+		<DxGridDataColumn FieldName="mxIndex"/>
+		<DxGridDataColumn FieldName="updateValueSuccess">
 			<CellDisplayTemplate>
 				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
 			</CellDisplayTemplate>
@@ -31,7 +35,12 @@
 			<CellDisplayTemplate>
 				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
 			</CellDisplayTemplate>
-		</DxGridDataColumn>
+		</DxGridDataColumn>@*
+		<DxGridDataColumn FieldName="updateType" Visible = "false">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>*@
 	</Columns>
 </DxGrid>
 
@@ -50,5 +59,42 @@
 	{
 		updateTime = DateTime.Now;
 		await base.OnParametersSetAsync();
+	}
+
+	private void SetUpdateDirectionColumn(GridUnboundColumnDataEventArgs e)
+	{
+		if (e.FieldName == "updateDirection")
+		{
+			bool tmp = Convert.ToBoolean(e.GetRowValue("updateType"));
+			e.Value = GetUpdateDirectionString(tmp);
+		}
+	}
+
+	private string GetUpdateDirectionString(bool updateType)
+	{
+		if (updateType)
+		{
+			return "modbus < < < plc";
+		}
+		else
+		{
+			return "modbus > > > plc";
+		}
+	}
+
+	private void UpdateType(GridCustomizeElementEventArgs e)
+	{
+		if (e.ElementType == GridElementType.DataRow)
+		{
+			if ((bool)e.Grid.GetRowValue(e.VisibleIndex, "updateType"))
+			{
+				e.CssClass = "PLCToModbus";
+			}
+			else
+			{
+				e.CssClass = "modBusToPLC";
+			}
+			
+		}
 	}
 }

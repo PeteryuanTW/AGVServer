@@ -59,7 +59,8 @@ namespace AGVServer.Data
 							modbusIndex = (ushort)(this.startIndex + (ushort)type.Offset),
 							modbusValue = false,
 							mxValue = false,
-							mxSuccessWrite = false,
+							updateType = type.UpdateType,
+							updateValueSuccess = false,
 							mxSuccessRead = false,
 						});
 					}
@@ -85,7 +86,7 @@ namespace AGVServer.Data
 			foreach (PLCValueTable plcValueTable in valueTables)
 			{
 				plcValueTable.mxValue = false;
-				plcValueTable.mxSuccessWrite = false;
+				plcValueTable.updateValueSuccess = false;
 				plcValueTable.mxSuccessRead = false;
 			}
 		}
@@ -125,7 +126,7 @@ namespace AGVServer.Data
 			}
 			return Task.CompletedTask;
 		}
-		public async Task<(bool, bool)> ReadSingleM_MX(ushort index)//return (value, no error -> true)
+		public async Task<(bool, bool)> ReadSingleM_MC_3E(ushort index)//return (value, no error -> true)
 		{
 			byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0c, 0x00, 0x00, 0x00, };
 			byte[] cmd = { 0x01, 0x04, };
@@ -135,10 +136,12 @@ namespace AGVServer.Data
 			byte[] points = { 0x02, 0x00 };
 			byte[] strSend = header.Concat(cmd).Concat(subCmd).Concat(mxIndex).Concat(device).Concat(points).ToArray();
 
+			Console.Write("Read send at " + DateTime.Now.ToString("tt hh:mm:ss.fff") + ":");
 			foreach (var a in strSend)
 			{
-				Console.WriteLine(a.ToString("x")+ " ");
+				Console.Write(a.ToString("x") + " ");
 			}
+			Console.WriteLine();
 
 			try
 			{
@@ -159,13 +162,13 @@ namespace AGVServer.Data
 				}
 				await nwStream.ReadAsync(res, 0, res.Length);
 
-				Console.Write("Read at " + DateTime.Now.ToString("tt hh:mm:ss.fff")+":");
+				Console.Write("Read get at " + DateTime.Now.ToString("tt hh:mm:ss.fff") + ":");
 				foreach (var a in res)
 				{
-					Console.Write(a.ToString("x")+" ");
+					Console.Write(a.ToString("x") + " ");
 				}
 				Console.WriteLine();
-				
+
 				if (res[9] == 0 && res[10] == 0)
 				{
 					string returnByteString = res[11].ToString("x2");
@@ -190,7 +193,7 @@ namespace AGVServer.Data
 		}
 
 
-		public async Task<(bool, bool, bool)> ReadPairM_MX(ushort index)//return (value, next value, no errot -> true)
+		public async Task<(bool, bool, bool)> ReadPairM_MC_3E(ushort index)//return (value, next value, no errot -> true)
 		{
 			byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0c, 0x00, 0x00, 0x00, };
 			byte[] cmd = { 0x01, 0x04, };
@@ -244,9 +247,9 @@ namespace AGVServer.Data
 				return (false, false, false);
 			}
 		}
-		public async Task<bool> WriteSingleM_MX(ushort index, bool val)//success write or not
+		public async Task<bool> WriteSingleM_MC_3E(ushort index, bool val)//success write or not
 		{
-			(bool, bool, bool) pairCoil = await ReadPairM_MX((ushort)(index));
+			(bool, bool, bool) pairCoil = await ReadPairM_MC_3E((ushort)(index));
 			if (!pairCoil.Item3)//read fail
 			{
 				return false;
@@ -297,11 +300,7 @@ namespace AGVServer.Data
 					await nwStream.WriteAsync(strSend, 0, strSend.Length);
 					byte[] res = new byte[11];//fixed 11
 					await nwStream.ReadAsync(res, 0, res.Length);
-					Console.Write("Write at " + DateTime.Now.ToString("tt hh:mm:ss.fff")+" ");
-					foreach (var a in res)
-					{
-						Console.Write(a);
-					}
+
 					if (res[9] == 0 && res[10] == 0)
 					{
 						return true;
@@ -320,27 +319,184 @@ namespace AGVServer.Data
 
 		public void SelfCheck()
 		{
-			int failCount = valueTables.Count(x => x.mxSuccessRead);
+			int failCount = valueTables.Count(x => x.updateValueSuccess);
 			if (failCount == 0)
 			{
 				TryDisconnect();
 			}
 		}
 
-		public async Task SendByteTest()
+		public async Task<(bool, bool)> ReadSingleM_MC_1E(ushort index)
 		{
-			byte[] tmp = { 0x00, 0xff, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x58, 0x08, 0x00 };
-			NetworkStream nwStream = tcpClient.GetStream();
-			nwStream.WriteTimeout = 1000;
-			nwStream.ReadTimeout = 1000;
+			byte[] header = { 0x00, 0xff, 0x00, 0x00};
+			byte[] mxIndex = BitConverter.GetBytes(index).Concat(new byte[] { 0x00, 0x00 }).ToArray();
+			byte[] device = { 0x20, 0x4d };
+			byte[] points = { 0x02 };
+			byte[] fixedValue = { 0x00 };
+			byte[] strSend = header.Concat(mxIndex).Concat(device).Concat(points).Concat(fixedValue).ToArray();
 
-			await nwStream.WriteAsync(tmp, 0, tmp.Length);
-			byte[] res = new byte[20];//fixed 11
-			await nwStream.ReadAsync(res, 0, res.Length);
-			foreach (var a in res)
+			try
 			{
-				Console.Write(a.ToString("x"));
+				NetworkStream nwStream = tcpClient.GetStream();
+				nwStream.WriteTimeout = 1000;
+				nwStream.ReadTimeout = 1000;
+
+				await nwStream.WriteAsync(strSend, 0, strSend.Length);
+				byte[] res = new byte[3];//fixed 3
+				await nwStream.ReadAsync(res, 0, res.Length);
+				if (res[0] == 0x80 && res[1] == 0x00)
+				{
+					string returnByteString = res[2].ToString("x2");
+					if (returnByteString[0] == '0')
+					{
+						return (false, true);
+					}
+					else
+					{
+						return (true, true);
+					}
+				}
+				else
+				{
+					return (false, false);
+				}
 			}
+			catch (Exception ex)
+			{
+				return (false, false);
+			}
+		}
+
+		public async Task<(bool, bool, bool)> ReadPairM_MC_1E(ushort index)
+		{
+			byte[] header = { 0x00, 0xff, 0x00, 0x00 };
+			byte[] mxIndex = BitConverter.GetBytes(index).Concat(new byte[] { 0x00, 0x00 }).ToArray();
+			byte[] device = { 0x20, 0x4d };
+			byte[] points = { 0x02 };
+			byte[] fixedValue = { 0x00 };
+			byte[] strSend = header.Concat(mxIndex).Concat(device).Concat(points).Concat(fixedValue).ToArray();
+
+			try
+			{
+				NetworkStream nwStream = tcpClient.GetStream();
+				nwStream.WriteTimeout = 1000;
+				nwStream.ReadTimeout = 1000;
+
+				await nwStream.WriteAsync(strSend, 0, strSend.Length);
+				byte[] res = new byte[3];//fixed 3
+				await nwStream.ReadAsync(res, 0, res.Length);
+				if (res[0] == 0x80 && res[1] == 0)
+				{
+					string returnByteString = res[2].ToString("x2");
+					if (returnByteString[0] == '0')//0X
+					{
+						if (returnByteString[1] == '0')
+						{
+							return (false, false, true);
+						}
+						else
+						{
+							return (false, true, true);
+						}
+					}
+					else//1X
+					{
+						if (returnByteString[1] == '0')
+						{
+							return (true, false, true);
+						}
+						else
+						{
+							return (true, true, true);
+						}
+					}
+				}
+				else
+				{
+					return (false, false, false);
+				}
+			}
+			catch (Exception ex)
+			{
+				return (false, false, false);
+			}
+		}
+
+		public async Task<bool> WriteSingleM_MC_1E(ushort index, bool val)
+		{
+			(bool, bool, bool) pairCoil = await ReadPairM_MC_1E((ushort)(index));
+			if (!pairCoil.Item3)//read fail
+			{
+				return false;
+			}
+			else
+			{
+				if (pairCoil.Item1 == val)//no need to write
+				{
+					return true;
+				}
+				byte[] header = { 0x02, 0xff, 0x00, 0x00 };
+				byte[] mxIndex = BitConverter.GetBytes(index).Concat(new byte[] { 0x00, 0x00 }).ToArray();
+				byte[] device = { 0x20, 0x4d };
+				byte[] points = { 0x02 };
+				byte[] fixedValue = { 0x00 };
+				byte[] inputVal;
+				if (pairCoil.Item2) //X1
+				{
+					if (val)
+					{
+						inputVal = new byte[] { 0x11, };
+					}
+					else
+					{
+						inputVal = new byte[] { 0x01, };
+					}
+				}
+				else //X0
+				{
+					if (val)
+					{
+						inputVal = new byte[] { 0x10, };
+					}
+					else
+					{
+						inputVal = new byte[] { 0x00, };
+					}
+				}
+				byte[] strSend = header.Concat(mxIndex).Concat(device).Concat(points).Concat(fixedValue).Concat(inputVal).ToArray();
+				try
+				{
+					NetworkStream nwStream = tcpClient.GetStream();
+					nwStream.WriteTimeout = 1000;
+					nwStream.ReadTimeout = 1000;
+
+					await nwStream.WriteAsync(strSend, 0, strSend.Length);
+					byte[] res = new byte[2];
+					await nwStream.ReadAsync(res, 0, res.Length);
+
+					if (res[0] == 0x82 && res[1] == 0)
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				catch (Exception ex)
+				{
+					return false;
+				}
+			}
+		}
+
+		private void PrintByteArray(byte[] byteArray)
+		{
+			foreach (byte tmp in byteArray)
+			{
+				Console.Write(tmp.ToString("x") + " ");
+			}
+			Console.WriteLine();
 		}
 	}
 }

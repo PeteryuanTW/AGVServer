@@ -1,33 +1,26 @@
 ﻿@page "/PLCDashboard"
 @inject DataBufferService dataBufferService
 
-<DxGrid PopupEditFormHeaderText="@currentIP" Data="@plcClasses" CustomizeEditModel="@OnEdit" EditModelSaving="@OnEditSave" EditMode="@GridEditMode.PopupEditForm">
+<style>
+	.plcConnect > td {
+		background-color: rgba(0, 219, 0, 0.3);
+	}
+
+	.plcDisconnect > td {
+		background-color: rgba(255, 204, 204, 0.5);
+	}
+</style>
+
+<DxGrid PopupEditFormHeaderText="@currentIP" Data="@plcClasses"
+	CustomizeEditModel="@OnEdit"
+	EditModelSaving="@OnEditSave"
+	EditMode="@GridEditMode.PopupEditForm"
+		CustomizeElement="@Grid_CustomizeConnectStyle">
 	<Columns>
-		<DxGridDataColumn FieldName="ip">
-			<CellDisplayTemplate>
-				<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="port">
-			<CellDisplayTemplate>
-				<DxSpinEdit Value="@((ushort)context.Value)" ReadOnly="true"></DxSpinEdit>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="name">
-			<CellDisplayTemplate>
-				<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="type">
-			<CellDisplayTemplate>
-				<DxTextBox Text="@context.Value.ToString()" ReadOnly="true"></DxTextBox>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
-		<DxGridDataColumn FieldName="tcpConnect">
-			<CellDisplayTemplate>
-				<DxCheckBox Checked="@((bool)context.Value)" CheckType=CheckType.Switch Enabled="false"></DxCheckBox>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="ip"/>
+		<DxGridDataColumn FieldName="port"/>
+		<DxGridDataColumn FieldName="name"/>
+		<DxGridDataColumn FieldName="type"/>
 		<DxGridDataColumn FieldName="keepUpdate">
 			<CellDisplayTemplate>
 				<DxCheckBox Checked="@((bool)context.Value)" CheckType=CheckType.Switch Enabled="false"></DxCheckBox>
@@ -85,6 +78,22 @@
 		if (target != null)
 		{
 			target.keepUpdate = keepUpdatingFlag;
+		}
+	}
+
+	private void Grid_CustomizeConnectStyle(GridCustomizeElementEventArgs e)
+	{
+		if (e.ElementType == GridElementType.DataRow)
+		{
+			if ((bool)e.Grid.GetRowValue(e.VisibleIndex, "tcpConnect"))
+			{
+				e.CssClass = "plcConnect";
+			}
+			else
+			{
+				e.CssClass = "plcDisconnect";
+			}
+			
 		}
 	}
 }
