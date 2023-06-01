@@ -48,7 +48,7 @@ namespace AGVServer.Service
 			}
 			if (tcpClient_LocalModbusSlave == null)
 			{
-				tcpClient_LocalModbusSlave = new TcpClient("127.0.0.1", 502);
+				tcpClient_LocalModbusSlave = new TcpClient("192.168.132.200", 502);
 				factory = new ModbusFactory();
 				master = factory.CreateMaster(tcpClient_LocalModbusSlave);
 			}

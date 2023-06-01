@@ -18,7 +18,7 @@ namespace AGVServer.Service
 		{
 			_dataBufferService = dataBufferService;
 			_configService = configService;
-			tcpClient = new TcpClient("127.0.0.1", 502);
+			tcpClient = new TcpClient("192.168.132.200", 502);
 			factory = new ModbusFactory();
 		}
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)

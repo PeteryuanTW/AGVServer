@@ -63,6 +63,8 @@ builder.Services.AddSingleton<PLCUpdateService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<PLCUpdateService>());
 #endregion
 
+
+
 var app = builder.Build();
 
 app.UseResponseCompression();
@@ -76,7 +78,7 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
@@ -88,7 +90,7 @@ app.MapFallbackToPage("/_Host");
 
 #region ModbusTcp Slave thread
 int port = 502;
-IPAddress address = new IPAddress(new byte[] { 127, 0, 0, 1 });
+IPAddress address = new IPAddress(new byte[] { 192, 168, 132, 200 });
 // create and start the TCP slave
 TcpListener slaveTcpListener = new TcpListener(address, port);
 slaveTcpListener.Start();
