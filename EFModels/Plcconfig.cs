@@ -5,10 +5,12 @@ namespace AGVServer.EFModels
 {
     public partial class Plcconfig
     {
+        public decimal No { get; set; }
         public string Ip { get; set; } = null!;
         public decimal Port { get; set; }
         public string Name { get; set; } = null!;
         public string Type { get; set; } = null!;
+        public bool AlignSide { get; set; }
         public string Plctype { get; set; } = null!;
         public decimal ModbusStartAddress { get; set; }
         public bool Enabled { get; set; }

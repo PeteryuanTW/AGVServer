@@ -5,46 +5,88 @@
 	.plcConnect > td {
 		background-color: rgba(0, 219, 0, 0.3);
 	}
-
 	.plcDisconnect > td {
 		background-color: rgba(255, 204, 204, 0.5);
 	}
-</style>
 
-<DxGrid PopupEditFormHeaderText="@currentIP" Data="@plcClasses"
-	CustomizeEditModel="@OnEdit"
-	EditModelSaving="@OnEditSave"
-	EditMode="@GridEditMode.PopupEditForm"
-		CustomizeElement="@Grid_CustomizeConnectStyle">
+	.modBusToPLC > td {
+		background-color: rgba(255, 229, 204, 0.5);
+	}
+	.PLCToModbus > td {
+		background-color: rgba(209, 227, 255, 0.5);
+	}
+</style>
+<DxFormLayout>
+	<DxFormLayoutItem Caption="PLC" ColSpanMd=4>
+		<DxComboBox Data="@ipList" Value=currentIP ValueChanged="(string s)=>{PLCSelect(s);}"></DxComboBox>
+	</DxFormLayoutItem>
+	<DxFormLayoutItem Caption="IP" ColSpanMd=4 BeginRow=true>
+		<DxSpinEdit @bind-Value="@currentPLC.port" Enabled=false></DxSpinEdit>
+	</DxFormLayoutItem>
+	<DxFormLayoutItem Caption="Name" ColSpanMd=4>
+		<DxTextBox @bind-Text="@currentPLC.name" Enabled=false></DxTextBox>
+	</DxFormLayoutItem>
+	<DxFormLayoutItem Caption="Type" ColSpanMd=4>
+		<DxTextBox @bind-Text="@currentPLC.plcType" Enabled=false></DxTextBox>
+	</DxFormLayoutItem>
+	<DxFormLayoutItem Caption="KeepUpdating" ColSpanMd=4>
+		<DxCheckBox @bind-Checked="@currentPLC.keepUpdate" CheckType="CheckType.Switch" Enabled=false></DxCheckBox>
+	</DxFormLayoutItem>
+	<DxFormLayoutItem Caption="Connected" ColSpanMd=4>
+		<DxCheckBox @bind-Checked="@currentPLC.tcpConnect" CheckType="CheckType.Switch" Enabled=false></DxCheckBox>
+	</DxFormLayoutItem>
+	<DxFormLayoutItem Caption="Category" ColSpanMd=4 BeginRow="true">
+		<DxComboBox Data="@categoryList" Value="@currentCategory" ValueChanged="(string newCategory)=>{SelectNewCategory(newCategory);}"></DxComboBox>
+	</DxFormLayoutItem>
+</DxFormLayout>
+@if (currentPLC.tcpConnect)
+{
+	<DxGrid Data="@targetPoints" UnboundColumnData="@SetUpdateDirectionColumn" CustomizeElement="UpdateType">
 	<Columns>
-		<DxGridDataColumn FieldName="ip"/>
-		<DxGridDataColumn FieldName="port"/>
-		<DxGridDataColumn FieldName="name"/>
-		<DxGridDataColumn FieldName="type"/>
-		<DxGridDataColumn FieldName="keepUpdate">
+		<DxGridDataColumn FieldName="modbusIndex"/>
+		<DxGridDataColumn FieldName="modbusValue">
 			<CellDisplayTemplate>
-				<DxCheckBox Checked="@((bool)context.Value)" CheckType=CheckType.Switch Enabled="false"></DxCheckBox>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
 			</CellDisplayTemplate>
 		</DxGridDataColumn>
-		<DxGridCommandColumn NewButtonVisible="false" EditButtonVisible="true" DeleteButtonVisible="false"></DxGridCommandColumn>
+		<DxGridDataColumn FieldName="updateDirection" UnboundType="GridUnboundColumnType.String"/>
+		<DxGridDataColumn FieldName="mxIndex"/>
+		<DxGridDataColumn FieldName="updateValueSuccess">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="mxValue">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="mxSuccessRead">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="remark"/>
+		<DxGridDataColumn FieldName="lastUpdateTime" DisplayFormat="yyyy/MM/dd HH:mm:ss fff"/>
 	</Columns>
-	<EditFormTemplate  Context="EditFormContext" >
-		<DxFormLayout>
-			<DxFormLayoutItem Caption="Keep Updating" ColSpanMd="6">
-				<DxCheckBox @bind-Checked="@keepUpdatingFlag" CheckType="CheckType.Switch" />
-			</DxFormLayoutItem>
-		</DxFormLayout>
-	</EditFormTemplate>
-	<DetailRowTemplate>
-		<MXModbusTable PLCValueTables="((PLCClass)context.DataItem).valueTables" />
-	</DetailRowTemplate>
 </DxGrid>
+}
+
 
 @code {
 
 	private DxGrid PLCGrid;
 
 	private IEnumerable<PLCClass> plcClasses;
+	private IEnumerable<string> ipList;
+
+	private PLCClass currentPLC;
+
+	private IEnumerable<PLCValueTable> targetPoints;
+
+	private IEnumerable<string> categoryList;
+	private string currentCategory;
+
 
 	private string currentIP;
 	private bool keepUpdatingFlag;
@@ -53,17 +95,36 @@
 
 	protected override Task OnInitializedAsync()
 	{
-		plcClasses = dataBufferService.GetPLCClasses().ToList();
+		plcClasses = dataBufferService.GetPLCClasses().Where(x => x.keepUpdate).ToList();
+		ipList = plcClasses.Select(x => x.ip);
+		currentIP = ipList.First();
+
+		currentPLC = plcClasses.First(x => x.ip == currentIP);
+
+		categoryList = currentPLC.valueTables.Select(x => x.category).Distinct();
+		currentCategory = categoryList.First();
+
+		targetPoints = currentPLC.valueTables.Where(x=>x.category==currentCategory).OrderBy(x=>x.modbusIndex);
+
 		dataBufferService.PLCClassesChangeAct += PLCDataChange;
 		return base.OnInitializedAsync();
+	}
+
+	private void PLCSelect(string plcIP)
+	{
+		currentIP = plcIP;
+		currentPLC = plcClasses.First(x => x.ip == plcIP);
+		targetPoints = currentPLC.valueTables.Where(x=>x.category==currentCategory).OrderBy(x=>x.modbusIndex);
 	}
 
 	private void PLCDataChange(List<PLCClass> newPLCClasses)
 	{
 		InvokeAsync(() =>
 		{
-			plcClasses = newPLCClasses;
+			currentPLC = plcClasses.First(x => x.ip == currentIP);
+			targetPoints = currentPLC.valueTables.Where(x=>x.category==currentCategory).OrderBy(x=>x.modbusIndex);
 			StateHasChanged();
+			//Console.WriteLine(DateTime.Now);
 		});
 	}
 
@@ -92,6 +153,49 @@
 			else
 			{
 				e.CssClass = "plcDisconnect";
+			}
+			
+		}
+	}
+
+	private void SelectNewCategory(string s)
+	{
+		currentCategory = s;
+		targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x=>x.modbusIndex);
+	}
+
+	private void SetUpdateDirectionColumn(GridUnboundColumnDataEventArgs e)
+	{
+		if (e.FieldName == "updateDirection")
+		{
+			bool tmp = Convert.ToBoolean(e.GetRowValue("updateType"));
+			e.Value = GetUpdateDirectionString(tmp);
+		}
+	}
+
+	private string GetUpdateDirectionString(bool updateType)
+	{
+		if (updateType)
+		{
+			return "modbus < < < plc";
+		}
+		else
+		{
+			return "modbus > > > plc";
+		}
+	}
+
+	private void UpdateType(GridCustomizeElementEventArgs e)
+	{
+		if (e.ElementType == GridElementType.DataRow)
+		{
+			if ((bool)e.Grid.GetRowValue(e.VisibleIndex, "updateType"))
+			{
+				e.CssClass = "PLCToModbus";
+			}
+			else
+			{
+				e.CssClass = "modBusToPLC";
 			}
 			
 		}

@@ -70,6 +70,14 @@ namespace AGVServer.EFModels
                     .HasColumnType("numeric(18, 0)")
                     .HasColumnName("offset");
 
+                entity.Property(e => e.Category)
+                    .HasMaxLength(50)
+                    .HasColumnName("category");
+
+                entity.Property(e => e.Remark)
+                    .HasMaxLength(50)
+                    .HasColumnName("remark");
+
                 entity.Property(e => e.UpdateType).HasColumnName("updateType");
             });
 
@@ -83,6 +91,8 @@ namespace AGVServer.EFModels
                     .HasMaxLength(50)
                     .HasColumnName("ip");
 
+                entity.Property(e => e.AlignSide).HasColumnName("alignSide");
+
                 entity.Property(e => e.Enabled).HasColumnName("enabled");
 
                 entity.Property(e => e.ModbusStartAddress)
@@ -92,6 +102,10 @@ namespace AGVServer.EFModels
                 entity.Property(e => e.Name)
                     .HasMaxLength(50)
                     .HasColumnName("name");
+
+                entity.Property(e => e.No)
+                    .HasColumnType("numeric(18, 0)")
+                    .HasColumnName("no");
 
                 entity.Property(e => e.Plctype)
                     .HasMaxLength(50)

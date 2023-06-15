@@ -13,5 +13,11 @@
 		public bool updateValueSuccess { get; set; }
 
 		public bool mxSuccessRead { get; set; }
+
+		public string category { get; set; }
+
+		public string? remark { get; set; }
+
+		public DateTime lastUpdateTime { get; set; }
 	}
 }

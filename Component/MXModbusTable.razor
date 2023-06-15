@@ -2,16 +2,17 @@
 
 <style>
 	.modBusToPLC > td {
-		background-color: rgba(212, 247, 247, 0.5);
+		background-color: rgba(255, 229, 204, 0.5);
 	}
 
 	.PLCToModbus > td {
-		background-color: rgba(229, 255, 229, 0.5);
+		background-color: rgba(209, 227, 255, 0.5);
 	}
 </style>
 
 <div>@updateTime</div>
-<DxGrid Data="@PLCValueTables" UnboundColumnData="@SetUpdateDirectionColumn" CustomizeElement="UpdateType">
+<DxComboBox Data="@categoryList" Value="@currentCategory" ValueChanged="(string newCategory)=>{SelectNewCategory(newCategory);}"></DxComboBox>
+<DxGrid @ref="@grid" Data="@targetPoints" UnboundColumnData="@SetUpdateDirectionColumn" CustomizeElement="UpdateType">
 	<Columns>
 		<DxGridDataColumn FieldName="modbusIndex"/>
 		<DxGridDataColumn FieldName="modbusValue">
@@ -35,23 +36,27 @@
 			<CellDisplayTemplate>
 				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
 			</CellDisplayTemplate>
-		</DxGridDataColumn>@*
-		<DxGridDataColumn FieldName="updateType" Visible = "false">
-			<CellDisplayTemplate>
-				<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
-			</CellDisplayTemplate>
-		</DxGridDataColumn>*@
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName="remark"/>
 	</Columns>
 </DxGrid>
 
 @code {
+	IGrid? grid { get; set; }
 	[Parameter]
 	public IEnumerable<PLCValueTable> PLCValueTables { get; set; }
+
+	private IEnumerable<PLCValueTable> targetPoints;
+	private IEnumerable<string> categoryList;
+	private string currentCategory;
 	private DateTime updateTime;
 
 	protected override Task OnInitializedAsync()
 	{
 		updateTime = DateTime.Now;
+		categoryList = PLCValueTables.Select(x => x.category).Distinct();
+		currentCategory = categoryList.First();
+		targetPoints = PLCValueTables.Where(x => x.category == currentCategory).OrderBy(x=>x.modbusIndex);
 		return base.OnInitializedAsync();
 	}
 
@@ -61,6 +66,13 @@
 		await base.OnParametersSetAsync();
 	}
 
+	private void SelectNewCategory(string s)
+	{
+		currentCategory = s;
+		targetPoints = PLCValueTables.Where(x => x.category == currentCategory).OrderBy(x=>x.modbusIndex);
+	}
+
+
 	private void SetUpdateDirectionColumn(GridUnboundColumnDataEventArgs e)
 	{
 		if (e.FieldName == "updateDirection")
@@ -69,7 +81,6 @@
 			e.Value = GetUpdateDirectionString(tmp);
 		}
 	}
-
 	private string GetUpdateDirectionString(bool updateType)
 	{
 		if (updateType)

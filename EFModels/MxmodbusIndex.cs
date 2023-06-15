@@ -9,6 +9,8 @@ namespace AGVServer.EFModels
         public string VariableType { get; set; } = null!;
         public decimal MxIndex { get; set; }
         public decimal Offset { get; set; }
-        public bool UpdateType { get; set; }//0:modbus update to plc, 1: plc update to modbus
+        public bool UpdateType { get; set; }
+        public string Category { get; set; } = null!;
+        public string? Remark { get; set; }
     }
 }

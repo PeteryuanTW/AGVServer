@@ -90,7 +90,7 @@ app.MapFallbackToPage("/_Host");
 
 #region ModbusTcp Slave thread
 int port = 502;
-IPAddress address = new IPAddress(new byte[] { 192, 168, 132, 200 });
+IPAddress address = new IPAddress(new byte[] { 10, 10, 3, 188 });
 // create and start the TCP slave
 TcpListener slaveTcpListener = new TcpListener(address, port);
 slaveTcpListener.Start();

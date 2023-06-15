@@ -20,9 +20,14 @@ namespace AGVServer.Service
 			{
 				if (_dataBufferService.GetBearerToken() != "")
 				{
+					
 					//update swarm core api here
 					try
 					{
+						if (_dataBufferService.loadout == null || _dataBufferService.loadin == null)
+						{
+							await _dataBufferService.UpdateFlowPattern();
+						}
 						await _dataBufferService.UpdateAMRStatus();
 
 						_dataBufferService.SetswarmCoreUpdateFlag(true);

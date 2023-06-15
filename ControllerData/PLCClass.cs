@@ -12,6 +12,8 @@ namespace AGVServer.Data
 	{
 		public string ip { get; set; }
 		public ushort port { get; set; }
+		public ushort no { get; set; }
+		public bool alignSide { get; set; }
 		public string name { get; set; }
 		public string type { get; set; }
 		public string plcType { get; set; }
@@ -43,11 +45,14 @@ namespace AGVServer.Data
 			this.startIndex = (ushort)plcconfig.ModbusStartAddress;
 			this.type = plcconfig.Type;
 			this.plcType = plcconfig.Plctype;
+			this.no = (ushort)plcconfig.No;
+			this.alignSide = plcconfig.AlignSide;
 
 			//init value mx modbus index table
 			this.valueTables = new();
 			if (typeIndexTable != null)
 			{
+				//Console.WriteLine(this.name+" start at: "+DateTime.Now);
 				foreach (MxmodbusIndex type in typeIndexTable)
 				{
 					int tmpModbusIndex = this.startIndex + (ushort)type.Offset;
@@ -62,12 +67,15 @@ namespace AGVServer.Data
 							updateType = type.UpdateType,
 							updateValueSuccess = false,
 							mxSuccessRead = false,
+							category = type.Category,
+							remark = type.Remark,
+							lastUpdateTime = DateTime.Now,
 						});
 					}
 
 				}
+				//Console.WriteLine(this.name + " end at: " + DateTime.Now);
 			}
-
 			this.keepUpdate = plcconfig.Enabled;
 			tryingConnect = false;
 		}

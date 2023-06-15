@@ -18,7 +18,7 @@ namespace AGVServer.Service
 		{
 			_dataBufferService = dataBufferService;
 			_configService = configService;
-			tcpClient = new TcpClient("192.168.132.200", 502);
+			tcpClient = new TcpClient("10.10.3.188", 502);
 			factory = new ModbusFactory();
 		}
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,8 +35,7 @@ namespace AGVServer.Service
 				{
 					Console.WriteLine(e);
 				}
-				int tmp = 5;
-				await Task.Delay(1 * 1000);
+				await Task.Delay(500);
 			}
 			tcpClient.Close();
 		}
