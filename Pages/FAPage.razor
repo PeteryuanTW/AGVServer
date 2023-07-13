@@ -5,8 +5,16 @@
 @inject NavigationManager navigationManager
 
 <style>
-	.highlighted-item > td {
-		background-color: rgba(245, 198, 203, 0.5);
+	.idel > td
+	{
+		background-color: rgba(0, 219, 0, 0.3);
+	}
+	.running > td
+	{
+		background-color: rgba(153, 204, 204, 0.3);
+	}
+	.notIdelOrRunning > td {
+		background-color: rgba(245, 198, 203, 0.3);
 	}
 </style>
 
@@ -151,9 +159,41 @@
 
 	private void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
 	{
-		if (e.ElementType == GridElementType.DataRow && (int)e.Grid.GetRowValue(e.VisibleIndex, "mode") != 10)
+		if (e.ElementType == GridElementType.DataRow)
 		{
-			e.CssClass = "highlighted-item";
+			switch ((int)e.Grid.GetRowValue(e.VisibleIndex, "mode"))
+			{
+				case 0:
+					e.CssClass = "idel";
+					break;
+				case 1:
+					e.CssClass = "running";
+					break;
+				case 2:
+					e.CssClass = "running";
+					break;
+				case 3:
+					e.CssClass = "notIdelOrRunning";
+					break;
+				case 4:
+					e.CssClass = "running";
+					break;
+				case 5:
+					e.CssClass = "notIdelOrRunning";
+					break;
+				case 6:
+					e.CssClass = "running";
+					break;
+				case 7:
+					e.CssClass = "running";
+					break;
+				case 8:
+					e.CssClass = "notIdelOrRunning";
+					break;
+				default:
+					e.CssClass = "notIdelOrRunning";
+					break;
+			}
 		}
 	}
 }

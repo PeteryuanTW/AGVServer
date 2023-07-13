@@ -1,0 +1,108 @@
+﻿@page "/History"
+@inject DataBufferService dataBufferService
+
+<DxTabs>
+	<DxTabPage Text="Detail Query">
+		<DxFormLayout>
+			<DxFormLayoutGroup>
+				<DxFormLayoutItem ColSpanMd=6 Caption="Mes No.">
+					<DxTextBox @bind-Text="@targetMes"></DxTextBox>
+				</DxFormLayoutItem>
+				<DxFormLayoutItem ColSpanMd=3>
+					<DxButton Text="Search" Click="(async()=>{await SearchMesTaskByNo();})"></DxButton>
+				</DxFormLayoutItem>
+			</DxFormLayoutGroup>
+			<DxFormLayoutGroup Caption="Result">
+				@if (targetMesTask != null)
+				{
+					<DxFormLayoutItem ColSpanMd=6 Caption="Assign AMR:" >
+						<DxTextBox Text="@targetMesTask.Amrid" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Swarm Core Task ID:">
+						<DxTextBox Text="@targetMesTask.TaskNoFromSwarmCore" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="From:" >
+						<DxTextBox Text="@targetMesTask.FromStation" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="To:">
+						<DxTextBox Text="@targetMesTask.ToStation" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Barcode:">
+						<DxTextBox Text="@targetMesTask.Barcode" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="From Position:">
+						<DxTextBox Text="@BoolToHighLowString(targetMesTask.LoaderToAmrhighOrLow)" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="To Position:">
+						<DxTextBox Text="@BoolToHighLowString(targetMesTask.AmrtoLoaderHighOrLow)" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Priority:">
+						<DxTextBox Text="@targetMesTask.Status.ToString()" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Status">
+						<DxTextBox Text="@GetStatusString(targetMesTask.Status)" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Get From Mes:">
+						<DxTextBox Text="@targetMesTask.GetFromMesTime" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Assign To SwarmCore:">
+						<DxTextBox Text="@targetMesTask.AssignToSwarmCoreTime" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="SwarmCore Start Processing:">
+						<DxTextBox Text="@targetMesTask.SwarmCoreActualStratTime" Enabled="false" />
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Finish Time:">
+						<DxTextBox Text="@targetMesTask.FinishOrTimeoutTime" Enabled="false"/>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem ColSpanMd=6 Caption="Finish Time:">
+						<DxTextBox Text="@targetMesTask.FinishOrTimeoutTime" Enabled="false" />
+					</DxFormLayoutItem>
+				}
+			</DxFormLayoutGroup>
+		</DxFormLayout>
+	</DxTabPage>
+	<DxTabPage Text="Export"></DxTabPage>
+</DxTabs>
+
+@code {
+	private string targetMes = "";
+	private MesTask targetMesTask;
+
+	protected override Task OnInitializedAsync()
+	{
+		return base.OnInitializedAsync();
+	}
+
+	private async Task SearchMesTaskByNo()
+	{
+		await Task.Run(() =>
+		{
+			targetMesTask = dataBufferService.GetAllTasks().FirstOrDefault(x => x.TaskNoFromMes == targetMes);
+		});
+	}
+
+	private string BoolToHighLowString(bool b)
+	{
+		return b ? "Top" : "Buttom";
+	}
+
+	private string GetStatusString(int i)
+	{
+		if (i == 0)
+		{
+			return "Get From MES(enqueue)";
+		}
+		else if (i == 1)
+		{
+			return "Swarm Running(wip)";
+		}
+		else if (i == 2)
+		{
+			return "Finished(only in db)";
+		}
+		else
+		{
+			return "Unknown";
+		}
+	}
+}

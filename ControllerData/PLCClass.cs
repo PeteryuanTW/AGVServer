@@ -2,9 +2,11 @@
 using DevExpress.ClipboardSource.SpreadsheetML;
 using DevExpress.Pdf.Native.BouncyCastle.Utilities.Net;
 using Microsoft.VisualBasic;
+using NModbus;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace AGVServer.Data
 {
@@ -24,7 +26,12 @@ namespace AGVServer.Data
 		public bool tcpConnect { get; set; }
 		public bool tryingConnect { get; set; }
 		public bool keepUpdate { get; set; }
-		public PLCClass(Plcconfig plcconfig, List<MxmodbusIndex> typeIndexTable)
+
+		public int maxRetryTimes { get; set; }
+		public int retryChance { get; set; }
+		public Dictionary<int, DateTime> retryFailRecord { get; set; }
+		public DateTime lastestConnectTime { get; set; }
+		public PLCClass(Plcconfig plcconfig, List<MxmodbusIndex> typeIndexTable, int maxRetryTimes)
 		{
 			System.Net.IPAddress tmp_ip;
 			if (System.Net.IPAddress.TryParse(plcconfig.Ip, out tmp_ip))
@@ -77,7 +84,12 @@ namespace AGVServer.Data
 				//Console.WriteLine(this.name + " end at: " + DateTime.Now);
 			}
 			this.keepUpdate = plcconfig.Enabled;
+			retryChance = maxRetryTimes;
 			tryingConnect = false;
+			lastestConnectTime = DateTime.Now;
+			retryFailRecord = new();
+
+			this.maxRetryTimes = maxRetryTimes;
 		}
 
 		public PLCClass()
@@ -101,21 +113,38 @@ namespace AGVServer.Data
 
 		public async Task TryConnectTcp()
 		{
-			tryingConnect = true;
-			try
+			if (retryChance <= 0)
 			{
-				tcpClient = new TcpClient();
-				await tcpClient.ConnectAsync(ip, port);
-				Console.WriteLine("success connect to " + ip + ":" + port);
-				tcpConnect = true;
+				Log.Warning("trying to connect to " + ip + " "+ maxRetryTimes + " times fail so set keep updating to false");
+				this.keepUpdate = false;
+				return;
 			}
-			catch (Exception ex)
+			if (!tryingConnect)
 			{
-				tcpConnect = false;
-				Console.WriteLine("try connect to "+ip+":"+port+" fail");
+				tryingConnect = true;
+				try
+				{
+					tcpClient = new TcpClient();
+					Log.Information("start connecting to " + ip + ":" + port);
+					await tcpClient.ConnectAsync(ip, port);
+					Log.Information("connect to " + ip + ":" + port);
+					tcpConnect = true;
+					lastestConnectTime = DateTime.Now;
+					retryFailRecord = new();
+					retryChance = maxRetryTimes;
+				}
+				catch (Exception ex)
+				{
+					tcpConnect = false;
+					retryChance--;
+					retryFailRecord.Add(maxRetryTimes-retryChance, DateTime.Now);
+					Log.Warning(ip+" try connecting fail, retry chance: " + retryChance);
+				}
+				tryingConnect = false;
 			}
-			tryingConnect = false;
-
+			else
+			{
+			}
 		}
 
 		public Task TryDisconnect()
@@ -127,6 +156,7 @@ namespace AGVServer.Data
 					tcpClient.Close();
 					tcpConnect = false;
 					ResetValueTables();
+					Log.Information("disconnect to " + ip + ":" + port);
 				}
 				catch (Exception e)
 				{
@@ -134,6 +164,89 @@ namespace AGVServer.Data
 			}
 			return Task.CompletedTask;
 		}
+
+		public async Task SyncPLCModbus(IModbusMaster master)
+		{
+			DateTime refreshStart = DateTime.Now;
+			foreach (PLCValueTable mxModbusIndex in valueTables)
+			{
+				//1: plc update to modbus
+				if (mxModbusIndex.updateType)
+				{
+					(bool, bool) valFromPLC = await ReadSingleM_MC_1E(mxModbusIndex.mxIndex);
+					mxModbusIndex.mxValue = valFromPLC.Item1;
+					mxModbusIndex.mxSuccessRead = valFromPLC.Item2;
+
+					bool[] modbusVals = await master.ReadCoilsAsync(1, mxModbusIndex.modbusIndex, 1);
+					bool modbusVal = modbusVals[0];
+
+					//mxModbusIndex.mxValue = valFromPLC.Item1;
+					//mxModbusIndex.mxSuccessRead = valFromPLC.Item2;
+					if (modbusVal != valFromPLC.Item1)//need to update
+					{
+
+						await master.WriteSingleCoilAsync(1, mxModbusIndex.modbusIndex, valFromPLC.Item1);
+						//mxModbusIndex.updateValueSuccess = true;
+						mxModbusIndex.lastUpdateTime = DateTime.Now;
+						Console.WriteLine(DateTime.Now.ToString("hh:mm:ss fff") + "|" + "update loader " + mxModbusIndex.mxIndex + "(" + mxModbusIndex.mxValue + ") to modbus " + mxModbusIndex.modbusIndex);
+
+						//await master.WriteSingleCoilAsync(1, mxModbusIndex.modbusIndex, valFromPLC.Item1);
+						//mxModbusIndex.updateValueSuccess = true;
+					}
+					modbusVals = await master.ReadCoilsAsync(1, mxModbusIndex.modbusIndex, 1);
+					modbusVal = modbusVals[0];
+					mxModbusIndex.modbusValue = modbusVal;
+
+					//valFromPLC = await plcClass.ReadSingleM_MC_1E(mxModbusIndex.mxIndex);
+				}
+				//0:modbus update to plc
+				else
+				{
+					bool[] res = await master.ReadCoilsAsync(1, mxModbusIndex.modbusIndex, 1);
+					bool valFromModbus = res[0];
+					mxModbusIndex.modbusValue = valFromModbus;
+
+					(bool, bool) tmp = await ReadSingleM_MC_1E(mxModbusIndex.mxIndex);
+					if (!tmp.Item2)
+					{
+						mxModbusIndex.mxValue = false;
+						mxModbusIndex.mxSuccessRead = false;
+					}
+					else
+					{
+						if (tmp.Item1 != valFromModbus)
+						{
+							await WriteSingleM_MC_1E(mxModbusIndex.mxIndex, valFromModbus);
+							mxModbusIndex.lastUpdateTime = DateTime.Now;
+							Console.WriteLine(DateTime.Now.ToString("hh:mm:ss fff") + "|" + "update modbus " + mxModbusIndex.modbusIndex + "(" + valFromModbus + ") to loader " + mxModbusIndex.mxIndex);
+						}
+						else
+						{
+
+						}
+
+					}
+					//mxModbusIndex.updateValueSuccess = await plcClass.WriteSingleM_MC_1E(mxModbusIndex.mxIndex, valFromModbus);
+
+					(bool, bool) readReturnVal = await ReadSingleM_MC_1E(mxModbusIndex.mxIndex);
+
+					mxModbusIndex.mxValue = readReturnVal.Item1;
+					mxModbusIndex.mxSuccessRead = readReturnVal.Item2;
+				}
+				if (mxModbusIndex.modbusValue == mxModbusIndex.mxValue && mxModbusIndex.mxSuccessRead)
+				{
+					mxModbusIndex.updateValueSuccess = true;
+				}
+				else
+				{
+					mxModbusIndex.updateValueSuccess = false;
+				}
+
+			}
+			DateTime refreshEnd = DateTime.Now;
+			SelfCheck();
+		}
+
 		public async Task<(bool, bool)> ReadSingleM_MC_3E(ushort index)//return (value, no error -> true)
 		{
 			byte[] header = { 0x50, 0x00, 0x00, 0xff, 0xff, 0x03, 0x00, 0x0c, 0x00, 0x00, 0x00, };
@@ -199,7 +312,6 @@ namespace AGVServer.Data
 				return (false, false);
 			}
 		}
-
 
 		public async Task<(bool, bool, bool)> ReadPairM_MC_3E(ushort index)//return (value, next value, no errot -> true)
 		{
@@ -496,15 +608,6 @@ namespace AGVServer.Data
 					return false;
 				}
 			}
-		}
-
-		private void PrintByteArray(byte[] byteArray)
-		{
-			foreach (byte tmp in byteArray)
-			{
-				Console.Write(tmp.ToString("x") + " ");
-			}
-			Console.WriteLine();
 		}
 	}
 }

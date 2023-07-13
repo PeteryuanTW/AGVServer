@@ -2,43 +2,81 @@
 @implements IDisposable
 @inject ConfigService configService
 @inject DataBufferService dataBufferService
+
 @inject TokenUpdateService tokenService
 @inject SwarmCoreUpdateService swarmCoreUpdateService
+@inject PLCUpdateService plcUpdateService
+@inject MesTaskUpdateService mesTaskUpdateService
 
-<div class="alert alert-@GetupdateStatusCss(tokenValid)" role="alert">
-	<DxCheckBox Checked="@tokenValid" CheckedChanged="(async (bool b)=>{await SwitchService(b);})" Enabled="@(!editMode)" CheckType="CheckType.Switch">@token</DxCheckBox>
-	@tokenUpdateTime
-</div>
-<div class="alert alert-@GetupdateStatusCss(apiUpdate)" role="alert">
-	<DxCheckBox Checked="@apiUpdate" CheckType="CheckType.Switch" Enabled="false"></DxCheckBox>
-	@apiUpdateTime
-</div>
-<DxFormLayout>
-	<DxFormLayoutGroup Caption="Swarm Core Setting" ColSpanMd="5">
-		<DxFormLayoutItem Caption=EditMode ColSpanMd="6" BeginRow=true>
-			<DxCheckBox @bind-Checked="editMode" Enabled="@(!tokenValid && !apiUpdate && !editMode)" CheckType="CheckType.Switch"></DxCheckBox>
-		</DxFormLayoutItem>
-		@foreach (Configuration configuration in configurations)
-		{
-			<DxFormLayoutItem Caption=@configuration.ConfigName ColSpanMd="8" BeginRow=true>
-				<DxTextBox @bind-Text="@configuration.ConfigValue" Enabled="@editMode"></DxTextBox>
-			</DxFormLayoutItem>
-		}
-		@if (editMode)
-		{
-			<DxFormLayoutItem ColSpanMd="8" BeginRow=true>
-				<DxButton Text="Save" Click="SaveConfig" RenderStyle="ButtonRenderStyle.Danger"></DxButton>
-			</DxFormLayoutItem>
-		}
+<DxTabs ActiveTabIndex="@activeTabIndex" ActiveTabIndexChanged="OnTabChanged">
+	<DxTabPage Text="Swarm Core">
+		<div class="alert alert-@GetupdateStatusCss(tokenValid)" role="alert">
+			<DxCheckBox Checked="@tokenValid" CheckedChanged="(async (bool b)=>{await SwitchService(b);})" Enabled="@(!editMode)" CheckType="CheckType.Switch">@token</DxCheckBox>
+			@tokenUpdateTime
+		</div>
+		<div class="alert alert-@GetupdateStatusCss(apiUpdate)" role="alert">
+			<DxCheckBox Checked="@apiUpdate" CheckType="CheckType.Switch" Enabled="false"></DxCheckBox>
+			@apiUpdateTime
+		</div>
+		<DxFormLayout>
+			<DxFormLayoutGroup Caption="Swarm Core Setting" ColSpanMd="5">
+				<DxFormLayoutItem Caption=EditMode ColSpanMd="6" BeginRow=true>
+					<DxCheckBox @bind-Checked="editMode" Enabled="@(!tokenValid && !apiUpdate && !editMode)" CheckType="CheckType.Switch"></DxCheckBox>
+				</DxFormLayoutItem>
+				@foreach (Configuration configuration in swarmcoreConfig)
+				{
+					<DxFormLayoutItem Caption=@configuration.ConfigName ColSpanMd="8" BeginRow=true>
+						<DxTextBox @bind-Text="@configuration.ConfigValue" Enabled="@editMode"></DxTextBox>
+					</DxFormLayoutItem>
+				}
+				@if (editMode)
+				{
+					<DxFormLayoutItem ColSpanMd="8" BeginRow=true>
+						<DxButton Text="Save" Click="(async()=>{await SaveConfig();})" RenderStyle="ButtonRenderStyle.Danger"></DxButton>
+					</DxFormLayoutItem>
+				}
 
-	</DxFormLayoutGroup>
-</DxFormLayout>
+			</DxFormLayoutGroup>
+		</DxFormLayout>
+	</DxTabPage>
+	<DxTabPage Text="PLC">
+		<DxFormLayout>
+			<DxFormLayoutGroup Caption="PLC Setting" ColSpanMd="5">
+				<DxFormLayoutItem Caption=EditMode ColSpanMd="6" BeginRow=true>
+					<DxCheckBox @bind-Checked="editMode" Enabled="@(!editMode)" CheckType="CheckType.Switch"></DxCheckBox>
+				</DxFormLayoutItem>
+				@foreach (Configuration configuration in plcConfig)
+				{
+					<DxFormLayoutItem Caption=@configuration.ConfigName ColSpanMd="8" BeginRow=true>
+						<DxTextBox @bind-Text="@configuration.ConfigValue" Enabled="@editMode"></DxTextBox>
+					</DxFormLayoutItem>
+				}
+				@if (editMode)
+				{
+					<DxFormLayoutItem ColSpanMd="8" BeginRow=true>
+						<DxButton Text="Save" Click="(async()=>{await SaveConfig();})" RenderStyle="ButtonRenderStyle.Danger"></DxButton>
+					</DxFormLayoutItem>
+				}
+
+			</DxFormLayoutGroup>
+		</DxFormLayout>
+	</DxTabPage>
+	<DxTabPage Text="Mes">
+		<div>aa</div>
+	</DxTabPage>
+</DxTabs>
+
 
 
 
 
 @code {
+	private int activeTabIndex = 0;
+
 	private IEnumerable<Configuration> configurations;
+	private IEnumerable<Configuration> swarmcoreConfig;
+	private IEnumerable<Configuration> plcConfig;
+	private IEnumerable<Configuration> mesConfig;
 	private bool editMode = false;
 
 	private bool tokenValid;
@@ -50,7 +88,8 @@
 
 	protected override Task OnInitializedAsync()
 	{
-		configurations = configService.GetConfigs();
+		InitConfigList();
+
 		tokenValid = configService.GetTokenValid();
 		token = dataBufferService.GetBearerToken();
 		tokenUpdateTime = configService.GetTokenUpdateTime();
@@ -71,6 +110,22 @@
 		dataBufferService.swarmCoreUpdateFlagChangeAct -= apiUpdateChange;
 	}
 
+	private void InitConfigList()
+	{
+		configurations = configService.GetConfigs();
+		swarmcoreConfig = configurations.Where(x => x.Category == 0);
+		plcConfig = configurations.Where(x => x.Category == 1);
+		mesConfig = configurations.Where(x => x.Category == 2);
+	}
+
+	private void OnTabChanged(int pageIndex)
+	{
+		if (!editMode)
+		{
+			activeTabIndex = pageIndex;
+		}
+	}
+
 	private async Task SwitchService(bool flag)
 	{
 		if (flag)
@@ -81,9 +136,6 @@
 		{
 			await tokenService.StopAsync(default);
 		}
-
-		//configService.SetTokenValid(flag);
-		//editMode = !configService.GetTokenValid();
 	}
 
 	private string GetupdateStatusCss(bool flag)
@@ -133,16 +185,45 @@
 
 	}
 
-	private void SaveConfig()
+	private async Task SaveConfig()
 	{
-		InvokeAsync(() =>
-			{
-				configService.UpdateConfigs(configurations);
-				configService.InitialVar();
-				configurations = configService.GetConfigs();
-				editMode = false;
-				tokenService.StartAsync(default);
-				StateHasChanged();
-			});
+		switch (activeTabIndex)
+		{
+			case 0:
+				await InvokeAsync(async () =>
+				{
+					await configService.UpdateConfigs(swarmcoreConfig);
+					configService.InitialVar();
+					editMode = false;
+					StateHasChanged();
+					await tokenService.StartAsync(default);
+				});
+				break;
+			case 1:
+				await InvokeAsync(async () =>
+					{
+						await configService.UpdateConfigs(plcConfig);
+						configService.InitialVar();
+						editMode = false;
+						StateHasChanged();
+						await plcUpdateService.StopAsync(default);
+						await plcUpdateService.StartAsync(default);
+					});
+				break;
+			case 2:
+				await InvokeAsync(async () =>
+						{
+							await configService.UpdateConfigs(plcConfig);
+							configService.InitialVar();
+							editMode = false;
+							StateHasChanged();
+							await mesTaskUpdateService.StopAsync(default);
+							await mesTaskUpdateService.StartAsync(default);
+						});
+				break;
+			default:
+				break;
+		}
+		InitConfigList();
 	}
 }

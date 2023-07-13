@@ -1,4 +1,5 @@
 ﻿using AGVServer.Data;
+using AGVServer.EFModels;
 using AGVServer.Service;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,19 +25,13 @@ namespace AGVServer.Controllers
 		[Route("[action]")]
 		public ActionResult<List<MesTask>> GetAllTasks()
 		{
-			return Ok(dataBufferService.GetTasks());
+			return Ok(dataBufferService.GetAllTasks());
 		}
 		[HttpGet]
 		[Route("[action]/{TaskID}")]
 		public ActionResult<MesTask> GetTaskByID([FromRoute] string TaskID)
 		{
-			return Ok(dataBufferService.GetTasksByNO(TaskID));
-		}
-		[HttpGet]
-		[Route("[action]/{barcodeRes}")]
-		public ActionResult<bool> CheckSequenceNumInTask([FromRoute] string barcodeRes)
-		{
-			return Ok(true);
+			return Ok(dataBufferService.GetAllTasks().FirstOrDefault(x=>x.TaskNoFromMes == TaskID));
 		}
 		#endregion
 
@@ -47,8 +42,18 @@ namespace AGVServer.Controllers
 		[Route("[action]")]
 		public async Task<ActionResult> AssignTaskAsync([FromBody] MesTask mesTask)
 		{
-			await dataBufferService.GetNewTask(mesTask);
-			return Ok();
+			//await dataBufferService.GetNewTaskTest(mesTask);
+			//await dataBufferService.GetNewTask(mesTask);
+			(bool, string) info =  await dataBufferService.GetNewMESTask(mesTask);
+			if (info.Item1)
+			{
+				return Ok(info.Item2);
+			}
+			else
+			{
+				return BadRequest(info.Item2);
+			}
+			
 		}
 		[HttpPost]
 		[Route("[action]/{amrID}")]

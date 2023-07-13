@@ -6,16 +6,16 @@ namespace AGVServer.Service
 	{
 		private readonly DataBufferService _dataBufferService;
 		private readonly ConfigService _configService;
-		private int refreshSec;
+		private int refreshSec = 3;
 		public SwarmCoreUpdateService(DataBufferService dataBufferService, ConfigService configService)
 		{
 			_dataBufferService = dataBufferService;
 			_configService = configService;
+			refreshSec = _configService.GetAPIUpdateSec();
 		}
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
-			refreshSec = _configService.GetAPIUpdateSec();
 			while (!stoppingToken.IsCancellationRequested)
 			{
 				if (_dataBufferService.GetBearerToken() != "")
@@ -24,10 +24,7 @@ namespace AGVServer.Service
 					//update swarm core api here
 					try
 					{
-						if (_dataBufferService.loadout == null || _dataBufferService.loadin == null)
-						{
-							await _dataBufferService.UpdateFlowPattern();
-						}
+						//await _dataBufferService.UpdateSwarmCoreTaskStatus();
 						await _dataBufferService.UpdateAMRStatus();
 
 						_dataBufferService.SetswarmCoreUpdateFlag(true);

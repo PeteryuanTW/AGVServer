@@ -1,0 +1,268 @@
+﻿@page "/"
+@page "/MesTask"
+@inject DataBufferService dataBufferService
+
+<style>
+	.Queueing > td {
+		background-color: rgb(217, 217, 217);
+	}
+
+	.Running > td {
+		background-color: rgb(153, 255, 243);
+	}
+
+	.Finished > td {
+		background-color: rgb(153, 255, 165);
+	}
+
+	.Error > td {
+		background-color: rgb(255, 51, 51);
+	}
+	.Pause > td {
+		background-color: rgb(255, 238, 153);
+	}
+
+	.Cancel > td {
+		background-color: rgb(255, 51, 51);
+	}
+</style>
+<DxGridLayout>
+	<Rows>
+		<DxGridLayoutRow Height="5%" />
+		<DxGridLayoutRow Height="95%" />
+	</Rows>
+	<Columns>
+		<DxGridLayoutColumn Width="30%" />
+		<DxGridLayoutColumn Width="70%" />
+	</Columns>
+	<Items>
+		<DxGridLayoutItem Row="0" Column="0" ColumnSpan="2">
+			<Template>
+				<div style="text-align:center; font-size:large">
+					WIP
+				</div>
+			</Template>
+		</DxGridLayoutItem>
+		<DxGridLayoutItem Row="1" Column="0">
+			<Template>
+				<div>
+					<DxGrid Data="@mesTasks" PageSize="10" FocusedRowEnabled="true" FocusedRowChanged="OnSelectTaskChanged" CustomizeCellDisplayText="@SetUnboundColumn" CustomizeElement="GetTaskStatusCss">
+						<Columns>
+							<DxGridDataColumn Caption="Mes no." FieldName="TaskNoFromMes" />
+							<DxGridDataColumn Caption="Status" FieldName="Status" />
+						</Columns>
+					</DxGrid>
+				</div>
+			</Template>
+		</DxGridLayoutItem>
+		<DxGridLayoutItem Row="1" Column="1">
+			<Template>
+				<div>
+					<DxFormLayout>
+						@if (selectedTask != null)
+						{
+							<DxFormLayoutGroup Caption="@selectedTask.TaskNoFromMes">
+								<DxFormLayoutItem Caption="Task Type:">
+									<DxSpinEdit Value="@selectedTask.TaskType" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="From:">
+									<DxTextBox Text="@selectedTask.FromStation" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="To:">
+									<DxTextBox Text="@selectedTask.ToStation" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="Barcode:">
+									<DxTextBox Text="@selectedTask.Barcode" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="Loader to AMR high port:">
+									<DxCheckBox Checked="@selectedTask.LoaderToAmrhighOrLow" Enabled="false"></DxCheckBox>
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="AMR to Loader high port:">
+									<DxCheckBox Checked="@selectedTask.AmrtoLoaderHighOrLow" Enabled="false"></DxCheckBox>
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="Status:">
+									<DxSpinEdit Value="@selectedTask.Status" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="Get From Mes:">
+									<DxTextBox Text="@selectedTask.GetFromMesTime" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="Assign To SwarmCore:">
+									<DxTextBox Text="@selectedTask.AssignToSwarmCoreTime" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="SwarmCore Start Task:">
+									<DxTextBox Text="@selectedTask.SwarmCoreActualStratTime" Enabled="false" />
+								</DxFormLayoutItem>
+								<DxFormLayoutItem Caption="Finish(or Timeout):">
+									<DxTextBox Text="@selectedTask.FinishOrTimeoutTime" Enabled="false" />
+								</DxFormLayoutItem>
+							</DxFormLayoutGroup>
+							<DxFormLayoutGroup Caption="Operation">
+								<DxFormLayoutItem ColSpanMd="4">
+									<DxButton Text="Delete" RenderStyle="ButtonRenderStyle.Danger" Enabled="@(selectedTask.Status==3)"></DxButton>
+								</DxFormLayoutItem>
+							</DxFormLayoutGroup>
+						}
+					</DxFormLayout>
+				</div>
+			</Template>
+		</DxGridLayoutItem>
+
+	</Items>
+</DxGridLayout>
+
+
+@code {
+	private List<MesTask> mesTasks;
+	private MesTask selectedTask;
+	protected override Task OnInitializedAsync()
+	{
+		mesTasks = dataBufferService.GetWIPTasks().ToList();
+		if (mesTasks != null || mesTasks.Count > 0)
+		{
+			selectedTask = mesTasks.FirstOrDefault();
+		}
+		dataBufferService.SingleMesTaskChangeAct += UpdateMesTaskStatus;
+		return base.OnInitializedAsync();
+	}
+
+	private void OnSelectTaskChanged(GridFocusedRowChangedEventArgs e)
+	{
+		selectedTask = e.DataItem == null ? null : e.DataItem as MesTask;
+		StateHasChanged();
+	}
+
+	private void UpdateMesTaskStatus(MesTask task)
+	{
+		//new mes task not assign to swarm core
+		if (task.Status == 0)
+		{
+			if (!mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
+			{
+				InvokeAsync(() =>
+				{
+					mesTasks.Add(new MesTask
+						{
+							TaskNoFromMes = task.TaskNoFromMes,
+							Amrid = task.Amrid,
+							FromStation = task.FromStation,
+							ToStation = task.ToStation,
+							Barcode = task.Barcode,
+							LoaderToAmrhighOrLow = task.LoaderToAmrhighOrLow,
+							AmrtoLoaderHighOrLow = task.AmrtoLoaderHighOrLow,
+							Priority = task.Priority,
+							Status = task.Status,
+							GetFromMesTime = task.GetFromMesTime,
+							AssignToSwarmCoreTime = task.AssignToSwarmCoreTime,
+							FinishOrTimeoutTime = task.FinishOrTimeoutTime,
+						});
+					StateHasChanged();
+				});
+
+			}
+		}
+		//complete & cancel
+		else if (task.Status == 2 || task.Status ==5)
+		{
+			if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
+			{
+				InvokeAsync(() =>
+				{
+					MesTask targetTask = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == task.TaskNoFromMes);
+					mesTasks.Remove(targetTask);
+					selectedTask = null;
+					StateHasChanged();
+				});
+			}
+		}
+		//update mes task  status (pause & fail) assigned to swarm core
+		else
+		{
+			if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
+			{
+				InvokeAsync(() =>
+				{
+					MesTask targetTask = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == task.TaskNoFromMes);
+					targetTask.Status = task.Status;
+					targetTask.Amrid = task.Amrid;
+					targetTask.TaskNoFromSwarmCore = task.TaskNoFromSwarmCore;
+					targetTask.AssignToSwarmCoreTime = task.AssignToSwarmCoreTime;
+					StateHasChanged();
+				});
+			}
+		}
+	}
+
+	private void SetUnboundColumn(GridCustomizeCellDisplayTextEventArgs e)
+	{
+		//Console.WriteLine(e.FieldName);
+		if (e.FieldName == "LoaderToAmrhighOrLow")
+		{
+			bool tmp = Convert.ToBoolean(e.GetRowValue("LoaderToAmrhighOrLow"));
+			e.DisplayText = tmp ? "Top" : "Bottom";
+		}
+		else if (e.FieldName == "AmrtoLoaderHighOrLow")
+		{
+			bool tmp = Convert.ToBoolean(e.GetRowValue("AmrtoLoaderHighOrLow"));
+			e.DisplayText = tmp ? "Top" : "Bottom";
+		}
+		else if (e.FieldName == "Status")
+		{
+			int tmp = Convert.ToInt32(e.GetRowValue("Status"));
+			if (tmp == 0)
+			{
+				e.DisplayText = "Queueing";
+			}
+			else if (tmp == 1)
+			{
+				e.DisplayText = "Running";
+			}
+			else if (tmp == 2)
+			{
+				e.DisplayText = "Finished";
+			}
+			else if (tmp == 3)
+			{
+				e.DisplayText = "Error";
+			}
+			else if (tmp == 4)
+			{
+				e.DisplayText = "Pause";
+			}
+			else if (tmp == 5)
+			{
+				e.DisplayText = "Cancel";
+			}
+		}
+	}
+
+	private void GetTaskStatusCss(GridCustomizeElementEventArgs e)
+	{
+		if (e.ElementType == GridElementType.DataRow)
+		{
+			if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 0)
+			{
+				e.CssClass = "Queueing";
+			}
+			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 1)
+			{
+				e.CssClass = "Running";
+			}
+			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 2)
+			{
+				e.CssClass = "Finished";
+			}
+			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 3)
+			{
+				e.CssClass = "Error";
+			}
+			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 4)
+			{
+				e.CssClass = "Pause";
+			}
+			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 5)
+			{
+				e.CssClass = "Canael";
+			}
+		}
+	}
+}

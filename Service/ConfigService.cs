@@ -22,7 +22,12 @@ namespace AGVServer.Service
 		private int tokenUpdateDay;
 		private bool APITokenValid = false;
 		private DateTime tokenUpdateTime = DateTime.Now;
+
 		private IEnumerable<Plcconfig> plcconfigs;
+		private int plcUpdateSecond;
+		private int plcRetryTimes;
+
+		private int MesTaskUpdateSecond;
 
 		public void InitialVar()
 		{
@@ -33,6 +38,10 @@ namespace AGVServer.Service
 			tokenUpdateDay = Convert.ToInt32(configurations.First(x => x.ConfigName == "tokenUpdateDay").ConfigValue);
 
 			plcconfigs = _DBcontext.Plcconfigs.ToList();
+			plcUpdateSecond = Convert.ToInt32(configurations.First(x => x.ConfigName == "PLCUpdateSecond").ConfigValue);
+			plcRetryTimes = Convert.ToInt32(configurations.First(x => x.ConfigName == "PLCRetryTimes").ConfigValue);
+
+			MesTaskUpdateSecond = Convert.ToInt32(configurations.First(x => x.ConfigName == "MesTaskUpdateSecond").ConfigValue);
 		}
 
 		public string GetURLAndPort()
@@ -65,23 +74,40 @@ namespace AGVServer.Service
 		public event Action<bool, DateTime>? SwarmCoreTokenChangeAct;
 		private void OnSwarmCoreTokenChange() => SwarmCoreTokenChangeAct?.Invoke(APITokenValid, tokenUpdateTime);
 
+		public int GetPLCUpdateSecond()
+		{
+			return plcUpdateSecond;
+		}
+
+		public int GetPLCRetryTimes()
+		{
+			return plcRetryTimes;
+		}
+
+		public int GetMesTaskUpdateSecond()
+		{
+			return MesTaskUpdateSecond;
+		}
+
 
 		public IEnumerable<Configuration> GetConfigs()
 		{
 			return configurations;
 		}
-		public void UpdateConfigs(IEnumerable<Configuration> newConfigs)
+		public async Task UpdateConfigs(IEnumerable<Configuration> newConfigs)
 		{
-			foreach (Configuration newConfig in newConfigs)
+			await Task.Run(async () =>
 			{
-				Configuration target = _DBcontext.Configurations.Find(newConfig.ConfigName);
-				if (target != null && target.ConfigValue != newConfig.ConfigValue)
+				foreach (Configuration newConfig in newConfigs)
 				{
-					_DBcontext.Entry(target).CurrentValues.SetValues(newConfig.ConfigValue);
+					Configuration target = _DBcontext.Configurations.FirstOrDefault(x=>x.ConfigName == newConfig.ConfigName);
+					if (target != null && target.ConfigValue != newConfig.ConfigValue)
+					{
+						_DBcontext.Configurations.Update(target);
+					}
 				}
-			}
-			_DBcontext.SaveChanges();
-
+				await _DBcontext.SaveChangesAsync();
+			});
 		}
 
 		public IEnumerable<Plcconfig> GetPlcConfigs()
