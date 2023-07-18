@@ -1,0 +1,30 @@
+﻿@page "/SchedulingTask"
+@inject DataBufferService dataBufferService
+<DxGrid Data="@schedulingTasks">
+	<Columns>
+		<DxGridDataColumn FieldName="TaskNoFromMes"></DxGridDataColumn>
+		<DxGridDataColumn FieldName="DelaySecond"></DxGridDataColumn>
+	</Columns>
+</DxGrid>
+<DxButton Text="Start" Click="(async ()=>{await dataBufferService.StartScheduling();})"></DxButton>
+@code {
+	private List<ImesTask> schedulingTasks;
+
+	protected override Task OnInitializedAsync()
+	{
+		schedulingTasks = dataBufferService.GetSchedulingTashs();
+		dataBufferService.ScheduleTasksChangeAct += UpdateSchedulingTashs;
+		return base.OnInitializedAsync();
+	}
+
+	private void UpdateSchedulingTashs(List<ImesTask> newStatus)
+	{
+		InvokeAsync(() =>
+		{
+			schedulingTasks = newStatus;
+			StateHasChanged();
+		});
+
+	}
+
+}

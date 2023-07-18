@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using static DevExpress.XtraPrinting.Export.Pdf.PdfImageCache;
 
 namespace AGVServer.JsonData_FA
 

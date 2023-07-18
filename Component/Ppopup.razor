@@ -1,0 +1,126 @@
+﻿@inject UIService uiService
+<style>
+	.closebtn {
+		height: auto;
+		width: auto;
+		margin: 1px 1px;
+	}
+</style>
+@switch (popupData.popupType)
+{
+	case PPopupType.Info:
+		<DxPopup @bind-Visible="@popupData.visible"
+				 BodyText="@popupData.content"
+				 CloseOnOutsideClick="false"
+				 ShowFooter=true
+				 Width="auto"
+				 MinWidth="300px"
+				 MaxWidth="600px">
+			<HeaderTemplate>
+				<div style="background-color:rgb(13, 204, 242); border-radius:5px ;color:black; font-size:x-large; text-align:center">
+					Info
+				</div>
+			</HeaderTemplate>
+			<FooterContentTemplate>
+				<DxButton RenderStyle="ButtonRenderStyle.Info" Text="OK"
+						  Click="@(()=>{uiService.ClosePopup();})" />
+			</FooterContentTemplate>
+		</DxPopup>
+		break;
+	case PPopupType.Success:
+		<DxPopup @bind-Visible="@popupData.visible"
+				 BodyText="@popupData.content"
+				 CloseOnOutsideClick="false"
+				 ShowFooter=true
+				 Width="auto"
+				 MinWidth="300px"
+				 MaxWidth="600px">
+			<HeaderTemplate>
+				<div style="background-color:rgb(25, 134, 83); border-radius:5px; color:white; font-size:x-large;text-align:center">
+					Success
+				</div>
+			</HeaderTemplate>
+			<FooterContentTemplate>
+				<DxButton RenderStyle="ButtonRenderStyle.Success" Text="OK"
+						  Click="@(()=>{uiService.ClosePopup();})" />
+			</FooterContentTemplate>
+		</DxPopup>
+		break;
+	case PPopupType.Warning:
+		<DxPopup @bind-Visible="@popupData.visible"
+				 BodyText="@popupData.content"
+				 CloseOnOutsideClick="false"
+				 ShowFooter=true
+				 Width="auto"
+				 MinWidth="300px"
+				 MaxWidth="600px">
+			<HeaderTemplate>
+				<div style="background-color:rgb(255, 193, 53); border-radius:5px; color:black; font-size:x-large;text-align:center">
+					Warning
+				</div>
+			</HeaderTemplate>
+			<FooterContentTemplate>
+				<DxButton RenderStyle="ButtonRenderStyle.Warning" Text="OK"
+						  Click="@(()=>{uiService.ClosePopup();})" />
+			</FooterContentTemplate>
+		</DxPopup>
+		break;
+	case PPopupType.Dangerous:
+		<DxPopup @bind-Visible="@popupData.visible"
+				 BodyText="@popupData.content"
+				 CloseOnOutsideClick="false"
+				 ShowFooter=true
+				 Width="auto"
+				 MinWidth="300px"
+				 MaxWidth="600px">
+			<HeaderTemplate>
+				<div style="background-color:rgb(220, 56, 72); border-radius:5px; color:white; font-size:x-large;text-align:center">
+					Error
+				</div>
+			</HeaderTemplate>
+			<FooterContentTemplate>
+				<DxButton RenderStyle="ButtonRenderStyle.Danger" Text="OK"
+						  Click="@(()=>{uiService.ClosePopup();})" />
+			</FooterContentTemplate>
+		</DxPopup>
+		break;
+	default:
+		<DxPopup @bind-Visible="@popupData.visible"
+				 BodyText="Warning"
+				 CloseOnOutsideClick="false"
+				 ShowFooter=true
+				 Width="auto"
+				 MinWidth="300px"
+				 MaxWidth="600px">
+			<HeaderTemplate>
+				<div style="background-color:rgb(109, 118, 126); border-radius:5px; color:white; font-size:x-large;text-align:center">
+					Unknow
+				</div>
+			</HeaderTemplate>
+			<FooterContentTemplate>
+				<DxButton RenderStyle="ButtonRenderStyle.Secondary" Text="OK"
+						  Click="@(()=>{uiService.ClosePopup();})" />
+			</FooterContentTemplate>
+		</DxPopup>
+		break;
+}
+
+@code {
+	private PPopupData popupData;
+	protected override void OnInitialized()
+	{
+		popupData = uiService.GetPopupData();
+		uiService.popupAct += GetNewPopup;
+	}
+	private async void GetNewPopup(PPopupData newPopup)
+	{
+		await InvokeAsync(() =>
+		{
+			popupData.visible = newPopup.visible;
+			popupData.popupType = newPopup.popupType;
+			popupData.content = newPopup.content;
+			StateHasChanged();
+		});
+
+	}
+}

@@ -32,7 +32,7 @@ namespace AGVServer.Service
 					catch (Exception e)
 					{
 						_dataBufferService.SetswarmCoreUpdateFlag(false);
-						Console.WriteLine("update swarm core data fail");
+						Console.WriteLine(DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")+" update swarm core data fail ("+e.ToString()+")");
 					}
 				}
 				else

@@ -1,108 +1,103 @@
 ﻿@page "/History"
+@using DevExpress.Export
 @inject DataBufferService dataBufferService
+@inject UIService uiService
 
-<DxTabs>
-	<DxTabPage Text="Detail Query">
-		<DxFormLayout>
-			<DxFormLayoutGroup>
-				<DxFormLayoutItem ColSpanMd=6 Caption="Mes No.">
-					<DxTextBox @bind-Text="@targetMes"></DxTextBox>
-				</DxFormLayoutItem>
-				<DxFormLayoutItem ColSpanMd=3>
-					<DxButton Text="Search" Click="(async()=>{await SearchMesTaskByNo();})"></DxButton>
-				</DxFormLayoutItem>
-			</DxFormLayoutGroup>
-			<DxFormLayoutGroup Caption="Result">
-				@if (targetMesTask != null)
-				{
-					<DxFormLayoutItem ColSpanMd=6 Caption="Assign AMR:" >
-						<DxTextBox Text="@targetMesTask.Amrid" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Swarm Core Task ID:">
-						<DxTextBox Text="@targetMesTask.TaskNoFromSwarmCore" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="From:" >
-						<DxTextBox Text="@targetMesTask.FromStation" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="To:">
-						<DxTextBox Text="@targetMesTask.ToStation" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Barcode:">
-						<DxTextBox Text="@targetMesTask.Barcode" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="From Position:">
-						<DxTextBox Text="@BoolToHighLowString(targetMesTask.LoaderToAmrhighOrLow)" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="To Position:">
-						<DxTextBox Text="@BoolToHighLowString(targetMesTask.AmrtoLoaderHighOrLow)" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Priority:">
-						<DxTextBox Text="@targetMesTask.Status.ToString()" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Status">
-						<DxTextBox Text="@GetStatusString(targetMesTask.Status)" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Get From Mes:">
-						<DxTextBox Text="@targetMesTask.GetFromMesTime" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Assign To SwarmCore:">
-						<DxTextBox Text="@targetMesTask.AssignToSwarmCoreTime" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="SwarmCore Start Processing:">
-						<DxTextBox Text="@targetMesTask.SwarmCoreActualStratTime" Enabled="false" />
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Finish Time:">
-						<DxTextBox Text="@targetMesTask.FinishOrTimeoutTime" Enabled="false"/>
-					</DxFormLayoutItem>
-					<DxFormLayoutItem ColSpanMd=6 Caption="Finish Time:">
-						<DxTextBox Text="@targetMesTask.FinishOrTimeoutTime" Enabled="false" />
-					</DxFormLayoutItem>
-				}
-			</DxFormLayoutGroup>
-		</DxFormLayout>
-	</DxTabPage>
-	<DxTabPage Text="Export"></DxTabPage>
-</DxTabs>
+<DxFormLayout>
+	<DxFormLayoutGroup Caption="Filter Conditions">
+		<DxFormLayoutItem BeginRow="true" Caption="Enable Time Filter" ColSpanMd=4>
+			<DxCheckBox @bind-Checked="@timeSearchEnable" CheckType="CheckType.Switch"></DxCheckBox>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem BeginRow="true" Caption="Start Time:" ColSpanMd=4>
+			<DxDateEdit @bind-Date="@startTime" Mask="yyyy/MM/dd HH:mm:ss" Enabled="false"></DxDateEdit>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="End Time:" ColSpanMd=4>
+			<DxDateEdit Date="@endTime" Mask="yyyy/MM/dd HH:mm:ss" TimeSectionVisible="true" Enabled="@timeSearchEnable" DateChanged="((DateTime t)=>{endTime = t; CalculateStartTime();})"></DxDateEdit>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem Caption="Lookback Hour(s):" ColSpanMd=4>
+			<DxSpinEdit Value="lookbackHour" MinValue="1" ValueChanged="((int i)=>{lookbackHour=i; CalculateStartTime();})" Enabled="@timeSearchEnable"></DxSpinEdit>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem BeginRow="true" Caption="Enable Mes No. Filter" ColSpanMd=4>
+			<DxCheckBox @bind-Checked="@mesTaskNoSearchEnable" CheckType="CheckType.Switch"></DxCheckBox>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem BeginRow="true" Caption="Mes No." ColSpanMd=4>
+			<DxTextBox @bind-Text="@targetMes" Enabled="@mesTaskNoSearchEnable"></DxTextBox>
+		</DxFormLayoutItem>
+		<DxFormLayoutItem ColSpanMd=4 BeginRow="true">
+			<DxButton Text="Search" Click="(async()=>{await SearchMesTaskByNo();})"></DxButton>
+		</DxFormLayoutItem>
+	</DxFormLayoutGroup>
+	<DxFormLayoutGroup Caption="Result">
+		@if (targetMesTasks!= null && targetMesTasks.Count() > 0)
+		{
+			<DxFormLayoutItem>
+				<DxButton Text="Export" Click="Export"></DxButton>
+			</DxFormLayoutItem>
+		}
+		<DxFormLayoutItem ColSpanMd=12>
+			<DxGrid @ref="@grid" Data="@targetMesTasks" AllowSelectRowByClick="true" SelectedDataItemChanged="RecordSelected" Show>
+				<Columns>
+					<DxGridDataColumn Caption="Mes no." FieldName="TaskNoFromMes" />
+					<DxGridDataColumn Caption="Finish Time" FieldName="FinishOrTimeoutTime" />
+					<DxGridDataColumn Caption="Finish Reason" FieldName="FinishReason" />
+				</Columns>
+			</DxGrid>
+		</DxFormLayoutItem>
+	</DxFormLayoutGroup>
+</DxFormLayout>
 
 @code {
+	private IGrid grid { get; set; }
+
+	private bool timeSearchEnable = true;
+	private DateTime startTime;
+	private DateTime endTime;
+	private int lookbackHour;
+
+	private bool mesTaskNoSearchEnable = true;
 	private string targetMes = "";
-	private MesTask targetMesTask;
+	private IEnumerable<MesTaskDetail> targetMesTasks = new List<MesTaskDetail>();
+
+	private MesTaskDetail targetMesTask;
 
 	protected override Task OnInitializedAsync()
 	{
+		endTime = DateTime.Now;
+		lookbackHour = 1;
+		CalculateStartTime();
 		return base.OnInitializedAsync();
+	}
+
+	private void CalculateStartTime()
+	{
+		startTime = endTime.AddHours(-lookbackHour);
+	}
+
+	private void RecordSelected(Object obj)
+	{
+		targetMesTask = (MesTaskDetail)obj;
 	}
 
 	private async Task SearchMesTaskByNo()
 	{
-		await Task.Run(() =>
+		uiService.ShowPanel("Loading...");
+		targetMesTasks = dataBufferService.GetFinishedTask();
+		if (timeSearchEnable)
 		{
-			targetMesTask = dataBufferService.GetAllTasks().FirstOrDefault(x => x.TaskNoFromMes == targetMes);
-		});
+			targetMesTasks = targetMesTasks.Where(x => Convert.ToDateTime(x.FinishOrTimeoutTime) >= startTime && Convert.ToDateTime(x.FinishOrTimeoutTime) <= endTime);
+
+		}
+		if (mesTaskNoSearchEnable)
+		{
+			targetMesTasks = targetMesTasks.Where(x => x.TaskNoFromMes.Contains(targetMes));
+		}
+		uiService.ClosePanel();
+		uiService.ShowPopup(PPopupType.Info, "get " + targetMesTasks.Count() + " record(s)");
 	}
 
-	private string BoolToHighLowString(bool b)
+	private async Task Export()
 	{
-		return b ? "Top" : "Buttom";
+		await grid.ExportToXlsxAsync("FinishedJob_" + startTime.ToString("yyyyMMddHHmmss") + "_" + endTime.ToString("yyyyMMddHHmmss"));
 	}
 
-	private string GetStatusString(int i)
-	{
-		if (i == 0)
-		{
-			return "Get From MES(enqueue)";
-		}
-		else if (i == 1)
-		{
-			return "Swarm Running(wip)";
-		}
-		else if (i == 2)
-		{
-			return "Finished(only in db)";
-		}
-		else
-		{
-			return "Unknown";
-		}
-	}
 }

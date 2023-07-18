@@ -3,6 +3,7 @@
 @implements IDisposable
 @inject DataBufferService dataBufferService
 @inject NavigationManager navigationManager
+@inject UIService uiService
 
 <style>
 	.idel > td
@@ -17,7 +18,6 @@
 		background-color: rgba(245, 198, 203, 0.3);
 	}
 </style>
-
 <DxGrid Data="@_AMRStatuses" UnboundColumnData="Grid_CustomUnboundColumnData" CustomizeElement="Grid_CustomizeElement">
 	<Columns>
 		<DxGridDataColumn FieldName="robot_id">
@@ -83,7 +83,6 @@
 	{
 		_AMRStatuses = dataBufferService.GetAMRstatusList().OrderBy(x => x.robot_id);
 		dataBufferService.AMRstatusListChangeAct += GetNewAMRStatus;
-
 		return base.OnInitializedAsync();
 	}
 	public void Dispose()

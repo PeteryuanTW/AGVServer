@@ -23,13 +23,13 @@ namespace AGVServer.Controllers
 		#region Get
 		[HttpGet]
 		[Route("[action]")]
-		public ActionResult<List<MesTask>> GetAllTasks()
+		public ActionResult<List<MesTaskDetail>> GetAllTasks()
 		{
 			return Ok(dataBufferService.GetAllTasks());
 		}
 		[HttpGet]
 		[Route("[action]/{TaskID}")]
-		public ActionResult<MesTask> GetTaskByID([FromRoute] string TaskID)
+		public ActionResult<MesTaskDetail> GetTaskByID([FromRoute] string TaskID)
 		{
 			return Ok(dataBufferService.GetAllTasks().FirstOrDefault(x=>x.TaskNoFromMes == TaskID));
 		}
@@ -40,7 +40,7 @@ namespace AGVServer.Controllers
 		#region Post
 		[HttpPost]
 		[Route("[action]")]
-		public async Task<ActionResult> AssignTaskAsync([FromBody] MesTask mesTask)
+		public async Task<ActionResult> AssignTaskAsync([FromBody] ImesTask mesTask)
 		{
 			//await dataBufferService.GetNewTaskTest(mesTask);
 			//await dataBufferService.GetNewTask(mesTask);
@@ -54,12 +54,6 @@ namespace AGVServer.Controllers
 				return BadRequest(info.Item2);
 			}
 			
-		}
-		[HttpPost]
-		[Route("[action]/{amrID}")]
-		public ActionResult AssignTaskToAMR([FromBody] MesTask mesTask, [FromRoute] string amrID)
-		{
-			return Ok();
 		}
 		#endregion
 

@@ -16,10 +16,13 @@ namespace AGVServer.EFModels
         {
         }
 
+        public virtual DbSet<CellConfig> CellConfigs { get; set; } = null!;
         public virtual DbSet<Configuration> Configurations { get; set; } = null!;
         public virtual DbSet<DockingConfig> DockingConfigs { get; set; } = null!;
+        public virtual DbSet<GroupConfig> GroupConfigs { get; set; } = null!;
+        public virtual DbSet<ImesTask> ImesTasks { get; set; } = null!;
         public virtual DbSet<ManualStationConfig> ManualStationConfigs { get; set; } = null!;
-        public virtual DbSet<MesTask> MesTasks { get; set; } = null!;
+        public virtual DbSet<MesTaskDetail> MesTaskDetails { get; set; } = null!;
         public virtual DbSet<MxmodbusIndex> MxmodbusIndices { get; set; } = null!;
         public virtual DbSet<Plcconfig> Plcconfigs { get; set; } = null!;
 
@@ -34,6 +37,43 @@ namespace AGVServer.EFModels
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<CellConfig>(entity =>
+            {
+                entity.HasKey(e => e.CellName);
+
+                entity.ToTable("CellConfig");
+
+                entity.Property(e => e.CellName)
+                    .HasMaxLength(50)
+                    .HasColumnName("cellName");
+
+                entity.Property(e => e.AlignSide).HasColumnName("alignSide");
+
+                entity.Property(e => e.ArtifactId)
+                    .HasMaxLength(50)
+                    .HasColumnName("artifactID");
+
+                entity.Property(e => e.GateInCell)
+                    .HasMaxLength(50)
+                    .HasColumnName("gateInCell");
+
+                entity.Property(e => e.GateOutCell)
+                    .HasMaxLength(50)
+                    .HasColumnName("gateOutCell");
+
+                entity.Property(e => e.RotateCell)
+                    .HasMaxLength(50)
+                    .HasColumnName("rotateCell");
+
+                entity.Property(e => e.RotateDegree)
+                    .HasMaxLength(50)
+                    .HasColumnName("rotateDegree");
+
+                entity.Property(e => e.RotateDest)
+                    .HasMaxLength(50)
+                    .HasColumnName("rotateDest");
+            });
+
             modelBuilder.Entity<Configuration>(entity =>
             {
                 entity.HasKey(e => new { e.Category, e.ConfigName })
@@ -67,6 +107,40 @@ namespace AGVServer.EFModels
                 entity.Property(e => e.GoalName)
                     .HasMaxLength(50)
                     .HasColumnName("goalName");
+            });
+
+            modelBuilder.Entity<GroupConfig>(entity =>
+            {
+                entity.HasKey(e => e.GroupName);
+
+                entity.ToTable("GroupConfig");
+
+                entity.Property(e => e.GroupName)
+                    .HasMaxLength(50)
+                    .HasColumnName("groupName");
+
+                entity.Property(e => e.Elements)
+                    .HasMaxLength(50)
+                    .HasColumnName("elements");
+
+                entity.Property(e => e.Occupied).HasColumnName("occupied");
+            });
+
+            modelBuilder.Entity<ImesTask>(entity =>
+            {
+                entity.HasKey(e => e.TaskNoFromMes);
+
+                entity.ToTable("IMesTask");
+
+                entity.Property(e => e.TaskNoFromMes).HasMaxLength(50);
+
+                entity.Property(e => e.Barcode).HasMaxLength(50);
+
+                entity.Property(e => e.FromStation).HasMaxLength(50);
+
+                entity.Property(e => e.GetFromMesTime).HasMaxLength(50);
+
+                entity.Property(e => e.ToStation).HasMaxLength(50);
             });
 
             modelBuilder.Entity<ManualStationConfig>(entity =>
@@ -108,11 +182,12 @@ namespace AGVServer.EFModels
                     .HasColumnName("rotateDest");
             });
 
-            modelBuilder.Entity<MesTask>(entity =>
+            modelBuilder.Entity<MesTaskDetail>(entity =>
             {
-                entity.HasKey(e => e.TaskNoFromMes);
+                entity.HasKey(e => e.TaskNoFromMes)
+                    .HasName("PK_MesTask");
 
-                entity.ToTable("MesTask");
+                entity.ToTable("MesTaskDetail");
 
                 entity.Property(e => e.TaskNoFromMes).HasMaxLength(50);
 
@@ -126,7 +201,11 @@ namespace AGVServer.EFModels
 
                 entity.Property(e => e.Barcode).HasMaxLength(50);
 
+                entity.Property(e => e.FailTime).HasMaxLength(50);
+
                 entity.Property(e => e.FinishOrTimeoutTime).HasMaxLength(50);
+
+                entity.Property(e => e.FinishReason).HasMaxLength(50);
 
                 entity.Property(e => e.FromStation).HasMaxLength(50);
 
@@ -187,21 +266,7 @@ namespace AGVServer.EFModels
                     .HasMaxLength(50)
                     .HasColumnName("ip");
 
-                entity.Property(e => e.AlignSide).HasColumnName("alignSide");
-
-                entity.Property(e => e.ArtifactId)
-                    .HasMaxLength(50)
-                    .HasColumnName("artifactID");
-
                 entity.Property(e => e.Enabled).HasColumnName("enabled");
-
-                entity.Property(e => e.GateInCell)
-                    .HasMaxLength(50)
-                    .HasColumnName("gateInCell");
-
-                entity.Property(e => e.GateOutCell)
-                    .HasMaxLength(50)
-                    .HasColumnName("gateOutCell");
 
                 entity.Property(e => e.ModbusStartAddress)
                     .HasColumnType("numeric(18, 0)")
@@ -222,18 +287,6 @@ namespace AGVServer.EFModels
                 entity.Property(e => e.Port)
                     .HasColumnType("numeric(18, 0)")
                     .HasColumnName("port");
-
-                entity.Property(e => e.RotateCell)
-                    .HasMaxLength(50)
-                    .HasColumnName("rotateCell");
-
-                entity.Property(e => e.RotateDegree)
-                    .HasMaxLength(50)
-                    .HasColumnName("rotateDegree");
-
-                entity.Property(e => e.RotateDest)
-                    .HasMaxLength(50)
-                    .HasColumnName("rotateDest");
 
                 entity.Property(e => e.Type)
                     .HasMaxLength(50)

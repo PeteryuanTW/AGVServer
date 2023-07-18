@@ -1,0 +1,24 @@
+﻿@inject UIService uiService
+
+<DxLoadingPanel Visible="@pLoadingPanelData.visible" Text="@pLoadingPanelData.panelText" IsContentBlocked="true" ApplyBackgroundShading="true" PositionTarget="#show-panel" />
+
+@code {
+	private PLoadingPanelData pLoadingPanelData;
+
+	protected override void OnInitialized()
+	{
+		pLoadingPanelData = uiService.GetPanelData();
+		uiService.panelAct += GetNewPanel;
+		base.OnInitialized();
+	}
+
+	private async void GetNewPanel(PLoadingPanelData newPanelData)
+	{
+		await InvokeAsync(() =>
+		{
+			pLoadingPanelData.visible = newPanelData.visible;
+			pLoadingPanelData.panelText = newPanelData.panelText;
+			StateHasChanged();
+		});
+	}
+}

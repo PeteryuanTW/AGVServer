@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace AGVServer.EFModels
 {
-    public partial class MesTask
+    public partial class MesTaskDetail
     {
         public string TaskNoFromMes { get; set; } = null!;
         public int TaskType { get; set; }
@@ -19,6 +19,8 @@ namespace AGVServer.EFModels
         public string GetFromMesTime { get; set; } = null!;
         public string AssignToSwarmCoreTime { get; set; } = null!;
         public string SwarmCoreActualStratTime { get; set; } = null!;
+        public string FailTime { get; set; } = null!;
         public string FinishOrTimeoutTime { get; set; } = null!;
+        public string FinishReason { get; set; } = null!;
     }
 }

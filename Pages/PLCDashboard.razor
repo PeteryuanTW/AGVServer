@@ -1,5 +1,6 @@
 ﻿@page "/PLCDashboard"
 @inject DataBufferService dataBufferService
+@inject UIService uiService
 @implements IDisposable
 
 <style>
@@ -44,9 +45,6 @@
 		</DxFormLayoutItem>
 		<DxFormLayoutItem Caption="Type" ColSpanMd=4>
 			<DxTextBox @bind-Text="@currentPLCConfig.Plctype" Enabled=false></DxTextBox>
-		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="Align Side" ColSpanMd=4>
-			<DxTextBox Text="@GetAlignSideString(currentPLCConfig.AlignSide)" Enabled=false></DxTextBox>
 		</DxFormLayoutItem>
 		<DxFormLayoutItem Caption="Enable" ColSpanMd=4 BeginRow="true">
 			<DxCheckBox @bind-Checked="@currentPLCConfig.Enabled" CheckType="CheckType.Switch" Enabled=false></DxCheckBox>
@@ -144,8 +142,9 @@
 
 
 
-	protected override Task OnInitializedAsync()
+	protected override async Task OnInitializedAsync()
 	{
+		uiService.ShowPanel("Loading...");
 		plcConfigs = dataBufferService.GetPLCConfigs();
 		//ipList = plcClasses.Select(x => x.ip);
 		currentPLCConfig = plcConfigs.First();
@@ -162,16 +161,20 @@
 			targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
 		}
 		dataBufferService.SinglePLCClassChangeAct += PLCDataChange;
-		return base.OnInitializedAsync();
+		//return base.OnInitializedAsync();
+	}
+
+	protected override Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			uiService.ClosePanel();
+		}
+		return base.OnAfterRenderAsync(firstRender);
 	}
 
 	public void Dispose()
 	{
-		plcConfigs = null;
-		currentPLC = null;
-		targetPoints = null;
-		categoryList = null;
-		currentPLCConfig = null;
 		dataBufferService.SinglePLCClassChangeAct -= PLCDataChange;
 	}
 
@@ -242,12 +245,7 @@
 			return "modbus > > > plc";
 		}
 	}
-	private string GetAlignSideString(bool flag)
-	{
-		string res;
-		res = flag ? "right" : "left";
-		return res;
-	}
+
 
 	private void UpdateType(GridCustomizeElementEventArgs e)
 	{

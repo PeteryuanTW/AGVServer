@@ -1,10 +1,13 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
+@inject UIService uiService
 
-<DxLayoutBreakpoint MaxWidth="1200"
-                    @bind-IsActive="@IsMobileLayout" />
 
-<div class="page">
+
+<PLoadingPanel/>
+<Ppopup/>
+<div class="page" id="show-panel">
+    
     <DxGridLayout CssClass="page-layout">
         <Rows>
             @if(IsMobileLayout) {
@@ -41,8 +44,7 @@
             </DxGridLayoutItem>
         </Items>
     </DxGridLayout>
-    </div>
-
+</div>
 @code{
     string? NavMenuCssClass { get; set; }
     bool _isMobileLayout;

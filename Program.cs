@@ -62,6 +62,7 @@ builder.Services.AddDbContextFactory<AGVDBContext>();
 #region Service
 builder.Services.AddSingleton<DataBufferService>();
 builder.Services.AddSingleton<ConfigService>();
+builder.Services.AddSingleton<UIService>();
 
 builder.Services.AddSingleton<TokenUpdateService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TokenUpdateService>());

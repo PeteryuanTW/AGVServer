@@ -15,7 +15,6 @@ namespace AGVServer.Data
 		public string ip { get; set; }
 		public ushort port { get; set; }
 		public ushort no { get; set; }
-		public bool alignSide { get; set; }
 		public string name { get; set; }
 		public string type { get; set; }
 		public string plcType { get; set; }
@@ -53,7 +52,6 @@ namespace AGVServer.Data
 			this.type = plcconfig.Type;
 			this.plcType = plcconfig.Plctype;
 			this.no = (ushort)plcconfig.No;
-			this.alignSide = plcconfig.AlignSide;
 
 			//init value mx modbus index table
 			this.valueTables = new();
