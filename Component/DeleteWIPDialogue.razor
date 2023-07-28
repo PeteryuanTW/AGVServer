@@ -3,14 +3,14 @@
 		<DxTextBox Text="@mesTask.TaskNoFromMes" ReadOnly="true" />
 	</DxFormLayoutItem>
 	<DxFormLayoutItem Caption="Reason: " BeginRow=true ColSpanMd="12">
-		<DxComboBox Data="reasonList" @bind-Value="@mesTask.FinishReason" ReadOnly="testData"></DxComboBox>
+		<DxComboBox Data="reasonList" @bind-Value="@mesTask.FinishReason"></DxComboBox>
 	</DxFormLayoutItem>
 </DxFormLayout>
 @code {
 	[Parameter]
 	public MesTaskDetail mesTask { get; set; }
 
-	private bool testData;
+	//private bool testData;
 
 	private List<string> reasonList = new List<string> { "moving", "handshaking" };
 
@@ -18,8 +18,8 @@
 
 	protected override Task OnInitializedAsync()
 	{
-		testData = mesTask.TaskNoFromMes.Trim().Contains("test");
-		mesTask.FinishReason = testData ? "test stop" : "moving";
+		//testData = mesTask.TaskNoFromMes.Trim().Contains("test");
+		mesTask.FinishReason = reasonList[0];
 		return base.OnInitializedAsync();
 	}
 }

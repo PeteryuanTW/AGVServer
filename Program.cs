@@ -75,6 +75,9 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<PLCUpdateService>(
 
 builder.Services.AddSingleton<MesTaskUpdateService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MesTaskUpdateService>());
+
+//builder.Services.AddSingleton<QueueUpdateService>();
+//builder.Services.AddHostedService(sp => sp.GetRequiredService<QueueUpdateService>());
 #endregion
 
 

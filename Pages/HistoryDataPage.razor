@@ -38,6 +38,8 @@
 			<DxGrid @ref="@grid" Data="@targetMesTasks" AllowSelectRowByClick="true" SelectedDataItemChanged="RecordSelected" Show>
 				<Columns>
 					<DxGridDataColumn Caption="Mes no." FieldName="TaskNoFromMes" />
+					<DxGridDataColumn Caption="Get From Mes Time" FieldName="TaskNoFromMes" />
+					<DxGridDataColumn Caption="Start Process Time" FieldName="SwarmCoreActualStratTime" />
 					<DxGridDataColumn Caption="Finish Time" FieldName="FinishOrTimeoutTime" />
 					<DxGridDataColumn Caption="Finish Reason" FieldName="FinishReason" />
 				</Columns>
@@ -85,7 +87,6 @@
 		if (timeSearchEnable)
 		{
 			targetMesTasks = targetMesTasks.Where(x => Convert.ToDateTime(x.FinishOrTimeoutTime) >= startTime && Convert.ToDateTime(x.FinishOrTimeoutTime) <= endTime);
-
 		}
 		if (mesTaskNoSearchEnable)
 		{

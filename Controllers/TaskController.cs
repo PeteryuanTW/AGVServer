@@ -31,19 +31,31 @@ namespace AGVServer.Controllers
 		[Route("[action]/{TaskID}")]
 		public ActionResult<MesTaskDetail> GetTaskByID([FromRoute] string TaskID)
 		{
-			return Ok(dataBufferService.GetAllTasks().FirstOrDefault(x=>x.TaskNoFromMes == TaskID));
+			MesTaskDetail res = dataBufferService.GetAllTasks().FirstOrDefault(x => x.TaskNoFromMes == TaskID);
+			if (res != null)
+			{
+				return Ok(res);
+			}
+			else
+			{
+				return Ok(null);
+			}
+            
 		}
 		#endregion
 
 
 
 		#region Post
+		/// <summary>
+		/// Assign an auto/auto Task to TM Server
+		/// </summary>
+		/// <param name="mesTask"></param>
+		/// <returns></returns>
 		[HttpPost]
 		[Route("[action]")]
 		public async Task<ActionResult> AssignTaskAsync([FromBody] ImesTask mesTask)
 		{
-			//await dataBufferService.GetNewTaskTest(mesTask);
-			//await dataBufferService.GetNewTask(mesTask);
 			(bool, string) info =  await dataBufferService.GetNewMESTask(mesTask);
 			if (info.Item1)
 			{
@@ -54,27 +66,6 @@ namespace AGVServer.Controllers
 				return BadRequest(info.Item2);
 			}
 			
-		}
-		#endregion
-
-
-
-		#region Put
-		[HttpPut]
-		[Route("[action]/{taskNO}/{status}")]
-		public ActionResult UpdateTaskStatus([FromRoute] string taskNO, [FromRoute] string status)
-		{
-			return Ok();
-		}
-		#endregion
-
-
-		#region Delete
-		[HttpDelete]
-		[Route("[action]/{TaskID}")]
-		public ActionResult RemoveTaskByID([FromRoute] string TaskID)
-		{
-			return Ok();
 		}
 		#endregion
 	}

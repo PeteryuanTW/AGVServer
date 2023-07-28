@@ -1,23 +1,86 @@
 ﻿@page "/SchedulingTask"
 @inject DataBufferService dataBufferService
-<DxGrid Data="@schedulingTasks">
+
+
+<DxGridLayout>
+	<Rows>
+		<DxGridLayoutRow Height="10%" />
+		<DxGridLayoutRow Height="90%" />
+	</Rows>
 	<Columns>
-		<DxGridDataColumn FieldName="TaskNoFromMes"></DxGridDataColumn>
-		<DxGridDataColumn FieldName="DelaySecond"></DxGridDataColumn>
+		<DxGridLayoutColumn Width="50%" />
+		<DxGridLayoutColumn Width="50%" />
 	</Columns>
-</DxGrid>
-<DxButton Text="Start" Click="(async ()=>{await dataBufferService.StartScheduling();})"></DxButton>
+	<Items>
+		<DxGridLayoutItem Row="0" Column="0">
+			<Template>
+				<div class="rounded-pill" style="background-color:rgb(255,255,255)">
+					<DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+						<Items>
+							@if (schedulingTasks.Count() == 0)
+							{
+								<DxToolbarItem Text="Get Data" RenderStyle="ButtonRenderStyle.Secondary" BeginGroup="true" Enabled="true" Click="(()=>{dataBufferService.RefreshSchedulingTasks(bot, top);})" />
+							}
+							else
+							{
+								if (processing)
+								{
+									<DxToolbarItem Text="Pause" RenderStyle="ButtonRenderStyle.Warning" BeginGroup="true" Enabled="true" Click="(()=>{dataBufferService.PauseScheduling();})" />
+									<DxToolbarItem Text="Stop" RenderStyle="ButtonRenderStyle.Danger" BeginGroup="true" Enabled="true" Click="(()=>{dataBufferService.StopScheduling();})" />
+								}
+								else
+								{
+									<DxToolbarItem Text="Start" RenderStyle="ButtonRenderStyle.Primary" BeginGroup="true" Enabled="true" Click="(async ()=>{await dataBufferService.StartScheduling();})" />
+								}
+							}
+
+						</Items>
+					</DxToolbar>
+				</div>
+			</Template>
+		</DxGridLayoutItem>
+		<DxGridLayoutItem Row="0" Column="1">
+			<Template>
+				<DxFormLayout>
+					<DxFormLayoutItem Caption="BOT">
+						<DxCheckBox @bind-Checked="bot" CheckType="CheckType.Switch" Enabled="@(schedulingTasks.Count() == 0)"></DxCheckBox>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem Caption="TOP">
+						<DxCheckBox @bind-Checked="top" CheckType="CheckType.Switch" Enabled ="@(schedulingTasks.Count() == 0)"></DxCheckBox>
+					</DxFormLayoutItem>
+				</DxFormLayout>
+			</Template>
+		</DxGridLayoutItem>
+		<DxGridLayoutItem Row="1" Column="0" ColumnSpan="2">
+			<Template>
+				<DxGrid Data="@schedulingTasks">
+					<Columns>
+						<DxGridDataColumn FieldName="TaskNoFromMes"></DxGridDataColumn>
+						<DxGridDataColumn FieldName="DelaySecond" DisplayFormat="g"></DxGridDataColumn>
+					</Columns>
+				</DxGrid>
+			</Template>
+		</DxGridLayoutItem>
+	</Items>
+</DxGridLayout>
+
 @code {
-	private List<ImesTask> schedulingTasks;
+	private List<ImesTask> schedulingTasks = new();
+	private bool processing;
+
+	private bool bot = false;
+	private bool top = false;
 
 	protected override Task OnInitializedAsync()
 	{
 		schedulingTasks = dataBufferService.GetSchedulingTashs();
-		dataBufferService.ScheduleTasksChangeAct += UpdateSchedulingTashs;
+		processing = dataBufferService.GetSchedulingStatus();
+		dataBufferService.ScheduleTasksChangeAct += UpdateSchedulingTasks;
+		dataBufferService.SchedulingChangeAct += UpdateSchedulingStatus;
 		return base.OnInitializedAsync();
 	}
 
-	private void UpdateSchedulingTashs(List<ImesTask> newStatus)
+	private void UpdateSchedulingTasks(List<ImesTask> newStatus)
 	{
 		InvokeAsync(() =>
 		{
@@ -25,6 +88,14 @@
 			StateHasChanged();
 		});
 
+	}
+	private void UpdateSchedulingStatus(bool status)
+	{
+		InvokeAsync(() =>
+		{
+			processing = status;
+			StateHasChanged();
+		});
 	}
 
 }

@@ -1,0 +1,60 @@
+﻿@page "/GroupQueue"
+@inject DataBufferService dataBufferService
+
+<DxGrid Data="@groups">
+	<Columns>
+		<DxGridDataColumn FieldName="name"></DxGridDataColumn>
+		<DxGridDataColumn FieldName="occupied">
+			<CellDisplayTemplate>
+				<DxCheckBox Checked="@((bool)context.Value)" CheckedChanged="((bool b)=>{SwitchGroupFlag(b, (GroupClass)context.DataItem);})" CheckType="CheckType.Switch"></DxCheckBox>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+	</Columns>
+</DxGrid>
+<DxGrid Data="@queueTask">
+	<Columns>
+		<DxGridDataColumn FieldName="TaskNoFromMes"></DxGridDataColumn>
+		<DxGridDataColumn FieldName="FromStation"></DxGridDataColumn>
+		<DxGridDataColumn FieldName="ToStation"></DxGridDataColumn>
+	</Columns>
+</DxGrid>
+@code {
+	private List<GroupClass> groups;
+	private List<ImesTask> queueTask;
+
+	protected override Task OnInitializedAsync()
+	{
+		//groups = dataBufferService.GetGroup();
+		queueTask = dataBufferService.GetQueue();
+
+		//dataBufferService.GroupChangeAct += GroupChanged;
+		dataBufferService.QueueTaskChangeAct += QueueTaskChanged;
+		return base.OnInitializedAsync();
+	}
+
+	private void SwitchGroupFlag(bool b, GroupClass g)
+	{
+		g.occupied = b;
+		StateHasChanged();
+	}
+
+	private void GroupChanged(List<GroupClass> newGroups)
+	{
+		InvokeAsync(() =>
+		{
+			groups = newGroups;
+			StateHasChanged();
+		});
+
+	}
+
+	private void QueueTaskChanged(List<ImesTask> newQueue)
+	{
+		InvokeAsync(() =>
+		{
+			queueTask = newQueue;
+			StateHasChanged();
+		});
+
+	}
+}

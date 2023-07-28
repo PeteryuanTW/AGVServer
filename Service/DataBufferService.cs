@@ -1,6 +1,7 @@
 ﻿using AGVServer.Data;
 using AGVServer.EFModels;
 using AGVServer.JsonData_FA;
+using AGVServer.Pages;
 using DevExpress.Blazor.Internal.Grid;
 using DevExpress.ClipboardSource.SpreadsheetML;
 using DevExpress.Office;
@@ -26,6 +27,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AGVServer.Service
 {
@@ -56,13 +58,17 @@ namespace AGVServer.Service
 
 		private List<ManualStationConfig> manualStationConfigs = new();
 
-		private List<ImesTask> scheduleTasks;
+		private List<ImesTask> scheduleTasks = new();
+		private bool scheduling = false;
+		private bool schedulingPause = false;
 
 		private List<MesTaskDetail> MesTasks_WIP = new();
 
 		private Dictionary<string, (TaskStatus, string)> swarmCoreTaskStatus = new();
 
-		private List<GroupClass> groups;
+		//private List<GroupClass> groups;
+
+		private List<ImesTask> queueForGroup;
 
 		public DataBufferService(IServiceScopeFactory scopeFactory)
 		{
@@ -90,14 +96,16 @@ namespace AGVServer.Service
 
 			MesTasks_WIP = _DBcontext.MesTaskDetails.Where(x => x.Status == 0 || x.Status == 1 || x.Status == 3 || x.Status == 4).ToList();
 
-			scheduleTasks = _DBcontext.ImesTasks.AsNoTracking<ImesTask>().ToList();
+			//RefreshSchedulingTask();
 
-			IEnumerable<GroupConfig> groupConfigs = _DBcontext.GroupConfigs.ToList();
-			groups = new();
-			foreach (GroupConfig groupConfig in groupConfigs)
-			{
-				groups.Add(new GroupClass(groupConfig));
-			}
+			//IEnumerable<GroupConfig> groupConfigs = _DBcontext.GroupConfigs.ToList();
+			//groups = new();
+			//foreach (GroupConfig groupConfig in groupConfigs)
+			//{
+			//	groups.Add(new GroupClass(groupConfig));
+			//}
+
+			//queueForGroup = new();
 		}
 
 		public string GetBearerToken()
@@ -148,6 +156,10 @@ namespace AGVServer.Service
 
 		}
 
+		//public List<GroupClass> GetGroup()
+		//{
+		//	return groups;
+		//}
 
 		public async Task UpdateAMRStatus()
 		{
@@ -172,6 +184,8 @@ namespace AGVServer.Service
 			catch (Exception e)
 			{
 				Console.WriteLine("update swarm core data fail  at " + baseURL + ":" + postfix + "(" + e.Message + ")");
+				await UpdateToken();
+				Console.WriteLine("retry get token by amr status");
 			}
 
 		}
@@ -206,7 +220,9 @@ namespace AGVServer.Service
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine("update swarm core data fail  at " + baseURL + ":" + postfix);
+				Console.WriteLine("update swarm core task fail  at " + baseURL + ":" + postfix);
+				await UpdateToken();
+				Console.WriteLine("retry get token by task status");
 			}
 		}
 
@@ -354,7 +370,10 @@ namespace AGVServer.Service
 		#region Mes
 		public List<MesTaskDetail> GetAllTasks()
 		{
-			return _DBcontext.MesTaskDetails.ToList();
+			using (AGVDBContext context = new AGVDBContext())
+			{
+				return context.MesTaskDetails.ToList();
+			}
 		}
 		public List<MesTaskDetail> GetWIPTasks()
 		{
@@ -476,7 +495,7 @@ namespace AGVServer.Service
 				AmrtoLoaderHighOrLow = mesTask.AmrtoLoaderHighOrLow,
 
 				Status = 0,
-				GetFromMesTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
+				GetFromMesTime = mesTask.GetFromMesTime,
 				Amrid = "not assign",
 				TaskNoFromSwarmCore = "unknown",
 				AssignToSwarmCoreTime = "not yet",
@@ -512,18 +531,41 @@ namespace AGVServer.Service
 
 		public async Task<(bool, string)> GetNewMESTask(ImesTask iMesTask)
 		{
-			Log.Information("get mesTask " + iMesTask.TaskNoFromMes);
-			//auto assign task no. with time
-			if (iMesTask.TaskNoFromMes.Contains("test"))
+			if (iMesTask.TaskNoFromMes.Contains("BOT") || iMesTask.TaskNoFromMes.Contains("TOP") || iMesTask.TaskNoFromMes.Contains("selftest"))
 			{
-				iMesTask.TaskNoFromMes = "test_" + DateTime.Now.ToString("yyyyMMddHHmmss");
-				MesTaskDetail mesTask = InitMesTask(iMesTask);
-				await UpsertMesTaskForDB(mesTask);//only insert here
-				Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
-				MesTasks_WIP.Add(mesTask);
-				Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
-				OnSingleMesTaskChange(mesTask);
-				return (true, "testing assign success");
+				iMesTask.TaskNoFromMes += ("_"+DateTime.Now.ToString("yyyyMMddHHmmss"));
+			}
+			Log.Information("get mesTask " + iMesTask.TaskNoFromMes);
+			iMesTask.GetFromMesTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
+			//if (!CheckFromCanAssign(iMesTask) || !CheckToCanAssign(iMesTask))
+			//{
+			//	//RefreshGroupFlag(iMesTask, true);
+			//	queueForGroup.Add(iMesTask);
+			//	OnQueueTaskChange();
+			//	return (true, "Group occupied queue the task in group");
+			//}
+			//else
+			//{
+			//	RefreshGroupFlag(iMesTask, true);
+			//}
+			//auto assign task no. with time
+			//if (iMesTask.TaskNoFromMes.Contains("test"))
+			//{
+			//	iMesTask.TaskNoFromMes = "test_" + DateTime.Now.ToString("yyyyMMddHHmmss");
+			//	MesTaskDetail mesTask = InitMesTask(iMesTask);
+			//	await UpsertMesTaskForDB(mesTask);//only insert here
+			//	Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
+			//	MesTasks_WIP.Add(mesTask);
+			//	Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
+			//	OnSingleMesTaskChange(mesTask);
+			//	//RefreshGroupFlag(iMesTask, false);
+			//	return (true, "testing assign success");
+			//}
+			if (iMesTask.Barcode.Count() != 12)
+			{
+				string info = "mesTask " + iMesTask.Barcode + " is invalid";
+				Log.Warning(info);
+				return (false, info);
 			}
 			if (MesTasks_WIP.Exists(x => x.TaskNoFromMes == iMesTask.TaskNoFromMes))
 			{
@@ -590,13 +632,13 @@ namespace AGVServer.Service
 						string startRotateTarget = startCellConfig.RotateDest;
 						string startGateOutCell = startCellConfig.GateOutCell;
 
-						string startGateOutArea = startGateOutCell.Contains("gate") ? "gate" : "default_area";
+						//string startGateOutArea = startGateOutCell.Contains("gate") ? "gate" : "default_area";
 
 						//destination point parameter
 
 						string destGateInCell = destCellConfig.GateInCell;
 
-						string destGateInArea = destGateInCell.Contains("gate") ? "gate" : "default_area";
+						//string destGateInArea = destGateInCell.Contains("gate") ? "gate" : "default_area";
 
 						string destArtifactID = destCellConfig.ArtifactId;
 						string destInOperation = destArtifactID == "artifact_39578" ? "pass" : "enter";
@@ -636,7 +678,16 @@ namespace AGVServer.Service
 						{
 							startOutOperation = "stay";
 							destInOperation = "stay";
+
+							startGateOutCell = startCellConfig.CellName;
+							//startGateOutArea = "default_area";
+
+							destGateInCell = destCellConfig.RotateCell;
+							//destGateOutArea = "default_area";
 						}
+						string startGateOutArea = startGateOutCell.Contains("gate") ? "gate" : "default_area";
+						string destGateInArea = destGateInCell.Contains("gate") ? "gate" : "default_area";
+
 
 						var args = new
 						{
@@ -736,46 +787,44 @@ namespace AGVServer.Service
 
 
 						//send api to swarmcore
-						if (!iMesTask.TaskNoFromMes.Trim().Contains("test"))
+						//if (!iMesTask.TaskNoFromMes.Trim().Contains("test"))
+						//{
+						var res = await httpClient_swarmCore.PostAsync(baseURL + postfix + "/auto_auto_diff_flow", new StringContent(body, Encoding.UTF8, "application/json"));
+						var respond = await res.Content.ReadAsStringAsync();
+						try
 						{
-							//AssignTaskDetail assignTaskDetail = JsonConvert.DeserializeObject<AssignTaskDetail>(respond);
-							//string flowID = assignTaskDetail.swarm_data.flow_id;
-
-							//var responseStr = await res.Content.ReadAsStringAsync();
-							var res = await httpClient_swarmCore.PostAsync(baseURL + postfix + "/auto_auto_diff_flow", new StringContent(body, Encoding.UTF8, "application/json"));
-							var respond = await res.Content.ReadAsStringAsync();
-							try
+							var response = JObject.Parse(respond);
+							int statusCode = (int)response["system_status_code"];
+							string msg = (string)response["system_message"];
+							if ((statusCode == 5550000 || statusCode == 200))
 							{
-								var response = JObject.Parse(respond);
-								int statusCode = (int)response["system_status_code"];
-								string msg = (string)response["system_message"];
-								if ((statusCode == 5550000 || statusCode == 200))
-								{
-									var data = (JObject)response["swarm_data"];
-									string flowID = (string)data["flow_id"];
+								var data = (JObject)response["swarm_data"];
+								string flowID = (string)data["flow_id"];
 
-									MesTaskDetail mesTask = InitMesTask(iMesTask);
-									Console.WriteLine(flowID);
-									AssignMesToSwarmCore(mesTask, flowID);
-									await UpsertMesTaskForDB(mesTask);//only insert here
-									Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
-									MesTasks_WIP.Add(mesTask);
-									Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
-									OnSingleMesTaskChange(mesTask);
-									return (true, "assign success");
-								}
-								else
-								{
-									Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
-									return (false, "error occured when assigning to swarmcore");
-								}
+								MesTaskDetail mesTask = InitMesTask(iMesTask);
+								Console.WriteLine(flowID);
+								AssignMesToSwarmCore(mesTask, flowID);
+								await UpsertMesTaskForDB(mesTask);//only insert here
+								Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
+								MesTasks_WIP.Add(mesTask);
+								Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
+								OnSingleMesTaskChange(mesTask);
+								//RefreshGroupFlag(iMesTask, true);
+								return (true, "assign success");
+
 							}
-							catch (Exception e)
+							else
 							{
 								Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
-								return (false, "error occured when assigning to swarmcore");
+								return (false, "error occured when assigning to swarmcore (" + msg + ")");
 							}
 						}
+						catch (Exception e)
+						{
+							Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
+							return (false, "error occured when assigning to swarmcore");
+						}
+						//}
 					}
 					break;
 				//manual to auto
@@ -786,18 +835,18 @@ namespace AGVServer.Service
 							return (false, "can't start from STCL or to STCU");
 						}
 						//get plc class by from & to
-						ManualStationConfig start_config = manualStationConfigs.First(x => x.Name.Contains(iMesTask.FromStation));
+						ManualStationConfig start_config = manualStationConfigs.FirstOrDefault(x => x.Name.Contains(iMesTask.FromStation));
 						if (start_config == null)
 						{
 							return (false, "check manual station config");
 						}
-						Plcconfig dest_config = plcconfigs.First(x => x.Name.Contains(iMesTask.ToStation));
+						Plcconfig dest_config = plcconfigs.FirstOrDefault(x => x.Name.Contains(iMesTask.ToStation));
 						if (dest_config == null)
 						{
 							return (false, "check plc config");
 						}
 
-						PLCClass destination = plcClasses.First(x => x.name.Contains(iMesTask.ToStation) && x.tcpConnect);
+						PLCClass destination = plcClasses.FirstOrDefault(x => x.name.Contains(iMesTask.ToStation) && x.tcpConnect);
 						if (destination == null)
 						{
 							return (false, "check loader station exist and connected");
@@ -854,10 +903,10 @@ namespace AGVServer.Service
 						int x_dest = 1;
 
 						int y_dest = destCellConfig.AlignSide ? 2 : 1;
-						if (destination.name.Contains("STCL"))
-						{
-							y_dest = 2;
-						}
+						//if (destination.name.Contains("STCL"))
+						//{
+						//	y_dest = 2;
+						//}
 
 						int z_dest = iMesTask.AmrtoLoaderHighOrLow ? 1 : 2;
 						string destPostfix = iMesTask.AmrtoLoaderHighOrLow ? "_up" : "_down";
@@ -866,7 +915,7 @@ namespace AGVServer.Service
 
 						int stationNO_dest = destination.no;
 
-						if (start_config.ArtifactId == destCellConfig.ArtifactId)
+						if (start_config.ArtifactId == destCellConfig.ArtifactId && start_config.ArtifactId != "artifact_39578")
 						{
 							startOutOperation = "stay";
 							destInOperation = "stay";
@@ -960,65 +1009,65 @@ namespace AGVServer.Service
 						Console.WriteLine(body);
 
 						//send api to swarmcore
-						if (!iMesTask.TaskNoFromMes.Trim().Contains("test"))
+						//if (!iMesTask.TaskNoFromMes.Trim().Contains("test"))
+						//{
+						var res = await httpClient_swarmCore.PostAsync(baseURL + postfix + "/manual_auto_flow", new StringContent(body, Encoding.UTF8, "application/json"));
+						var respond = await res.Content.ReadAsStringAsync();
+						try
 						{
-							var res = await httpClient_swarmCore.PostAsync(baseURL + postfix + "/manual_auto_flow", new StringContent(body, Encoding.UTF8, "application/json"));
-							var respond = await res.Content.ReadAsStringAsync();
-							try
+							var response = JObject.Parse(respond);
+							int statusCode = (int)response["system_status_code"];
+							string msg = (string)response["system_message"];
+							if ((statusCode == 5550000 || statusCode == 200))
 							{
-								var response = JObject.Parse(respond);
-								int statusCode = (int)response["system_status_code"];
-								string msg = (string)response["system_message"];
-								if ((statusCode == 5550000 || statusCode == 200))
-								{
-									var data = (JObject)response["swarm_data"];
-									string flowID = (string)data["flow_id"];
+								var data = (JObject)response["swarm_data"];
+								string flowID = (string)data["flow_id"];
 
-									MesTaskDetail mesTask = InitMesTask(iMesTask);
-									//Console.WriteLine(flowID);
-									AssignMesToSwarmCore(mesTask, flowID);
-									await UpsertMesTaskForDB(mesTask);//only insert here
-									Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
-									MesTasks_WIP.Add(mesTask);
-									Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
-									OnSingleMesTaskChange(mesTask);
-									return (true, "assign success");
-								}
-								else
-								{
-									Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
-									return (false, "error occured when assigning to swarmcore");
-								}
+								MesTaskDetail mesTask = InitMesTask(iMesTask);
+								//Console.WriteLine(flowID);
+								AssignMesToSwarmCore(mesTask, flowID);
+								await UpsertMesTaskForDB(mesTask);//only insert here
+								Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
+								MesTasks_WIP.Add(mesTask);
+								Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
+								OnSingleMesTaskChange(mesTask);
+								return (true, "assign success");
 							}
-							catch (Exception e)
+							else
 							{
 								Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
-								return (false, "error occured when assigning to swarmcore");
+								return (false, "error occured when assigning to swarmcore (" + msg + ")");
 							}
 						}
-						//test data
-						else
+						catch (Exception e)
 						{
-							MesTaskDetail mesTask = InitMesTask(iMesTask);
-							await UpsertMesTaskForDB(mesTask);//only insert here
-							Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
-							MesTasks_WIP.Add(mesTask);
-							Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
-							OnSingleMesTaskChange(mesTask);
-							return (true, "testing assign success");
+							Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
+							return (false, "error occured when assigning to swarmcore");
 						}
+						//}
+						//test data
+						//else
+						//{
+						//	MesTaskDetail mesTask = InitMesTask(iMesTask);
+						//	await UpsertMesTaskForDB(mesTask);//only insert here
+						//	Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
+						//	MesTasks_WIP.Add(mesTask);
+						//	Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
+						//	OnSingleMesTaskChange(mesTask);
+						//	return (true, "testing assign success");
+						//}
 					}
 					break;
 				//auto to manual
 				case 2:
 					{
 						//get plc class by from & to
-						PLCClass start = plcClasses.First(x => x.name.Contains(iMesTask.FromStation) && x.tcpConnect);
+						PLCClass start = plcClasses.FirstOrDefault(x => x.name.Contains(iMesTask.FromStation) && x.tcpConnect);
 						if (start == null)
 						{
 							return (false, "check loader " + iMesTask.FromStation + " exist and connected");
 						}
-						Plcconfig start_config = plcconfigs.First(x => x.Name.Contains(iMesTask.FromStation));
+						Plcconfig start_config = plcconfigs.FirstOrDefault(x => x.Name.Contains(iMesTask.FromStation));
 						if (start_config == null)
 						{
 							return (false, "check plc config");
@@ -1029,7 +1078,7 @@ namespace AGVServer.Service
 						{
 							return (false, "check cell config of " + iMesTask.FromStation);
 						}
-						ManualStationConfig dest_config = manualStationConfigs.First(x => x.Name.Contains(iMesTask.ToStation));
+						ManualStationConfig dest_config = manualStationConfigs.FirstOrDefault(x => x.Name.Contains(iMesTask.ToStation));
 						if (dest_config == null)
 						{
 							return (false, "check plc config");
@@ -1051,6 +1100,8 @@ namespace AGVServer.Service
 
 						string startGateOutCell = startCellConfig.GateOutCell;
 
+						string startGateInArea = startGateInCell.Contains("gate") ? "gate" : "default_area";
+						string startGateOutArea = startGateOutCell.Contains("gate") ? "gate" : "default_area";
 
 
 						//manual destination station
@@ -1067,7 +1118,8 @@ namespace AGVServer.Service
 
 						string destGateOutCell = dest_config.GateOutCell != "" ? dest_config.GateOutCell : endPointStr;
 
-
+						string destGateInArea = destGateInCell.Contains("gate") ? "gate" : "default_area";
+						string destGateOutArea = destGateOutCell.Contains("gate") ? "gate" : "default_area";
 
 						//start auto station parameter
 						int startBaseIndex = iMesTask.LoaderToAmrhighOrLow ? start.startIndex + 5 : start.startIndex + 5 + 9;
@@ -1083,7 +1135,7 @@ namespace AGVServer.Service
 
 						int stationNO_start = start.name.Contains("STCU") ? start.no : start.no + 4;
 
-						if (startCellConfig.ArtifactId == dest_config.ArtifactId)
+						if (startCellConfig.ArtifactId == dest_config.ArtifactId && dest_config.ArtifactId != "artifact_39578")
 						{
 							startOutOperation = "stay";
 							destInOperation = "stay";
@@ -1103,7 +1155,7 @@ namespace AGVServer.Service
 
 									//first handshake
 									//enter gate & docking (move, artifact, move, rotate, move, dockingArtifact)
-									goal_l50AK = "ADLINK_Final_1" + "@gate@" + startGateInCell,
+									goal_l50AK = "ADLINK_Final_1" + "@"+ startGateInArea + "@" + startGateInCell,
 
 									artifact_id_JcTlC = startArtifactID,
 									value_JcTlC = "operation:" + startInOperation,
@@ -1116,7 +1168,7 @@ namespace AGVServer.Service
 									goal_CDQ4v = "ADLINK_Final_1" + "@default_area@" + startPointStr,
 
 									artifact_value = "cmd:m300_get,targetval:true",
-									goal_7i3Yd = "ADLINK_Final_1" + "@default_area@" + startPointStr,
+									goal_7i3Yd = "ADLINK_Final_1" + "@"+ startGateInArea + "@" + startPointStr,
 
 
 									//loadout loader -> amr
@@ -1131,7 +1183,7 @@ namespace AGVServer.Service
 									value_zB6On = "cmd:m" + (startBaseIndex + 2).ToString() + "_set,targetval:false",
 
 									//leave gate
-									goal_Dp4xX = "ADLINK_Final_1" + "@gate@" + startGateOutCell,
+									goal_Dp4xX = "ADLINK_Final_1" + "@"+startGateOutArea+"@" + startGateOutCell,
 
 									artifact_id_jAQf0 = startArtifactID,
 									value_jAQf0 = "operation:" + startOutOperation,
@@ -1139,7 +1191,7 @@ namespace AGVServer.Service
 
 
 									//enter gate & docking (move, artifact, move, rotate, move, dockingArtifact)
-									goal_UvAQD = "ADLINK_Final_1" + "@gate@" + destGateInCell,
+									goal_UvAQD = "ADLINK_Final_1" + "@"+ destGateInArea + "@" + destGateInCell,
 
 									artifact_id_279vX = destArtifactID,
 									value_279vX = "operation:" + destInOperation,
@@ -1158,7 +1210,7 @@ namespace AGVServer.Service
 									value_27E0Y = "cmd:d305_set,targetval:" + dest_config.No.ToString(),
 
 									//leave gate
-									goal_xRCOG = "ADLINK_Final_1" + "@gate@" + destGateOutCell,
+									goal_xRCOG = "ADLINK_Final_1" + "@"+ destGateOutArea + "@" + destGateOutCell,
 
 									artifact_id_zoI1l = destArtifactID,
 									value_zoI1l = "operation:" + destOutOperation,
@@ -1174,53 +1226,53 @@ namespace AGVServer.Service
 						Console.WriteLine(body);
 
 						//send api to swarmcore
-						if (!iMesTask.TaskNoFromMes.Trim().Contains("test"))
+						//if (!iMesTask.TaskNoFromMes.Trim().Contains("test"))
+						//{
+						var res = await httpClient_swarmCore.PostAsync(baseURL + postfix + "/auto_manual_flow", new StringContent(body, Encoding.UTF8, "application/json"));
+						var respond = await res.Content.ReadAsStringAsync();
+						try
 						{
-							var res = await httpClient_swarmCore.PostAsync(baseURL + postfix + "/auto_manual_flow", new StringContent(body, Encoding.UTF8, "application/json"));
-							var respond = await res.Content.ReadAsStringAsync();
-							try
+							var response = JObject.Parse(respond);
+							int statusCode = (int)response["system_status_code"];
+							string msg = (string)response["system_message"];
+							if ((statusCode == 5550000 || statusCode == 200))
 							{
-								var response = JObject.Parse(respond);
-								int statusCode = (int)response["system_status_code"];
-								string msg = (string)response["system_message"];
-								if ((statusCode == 5550000 || statusCode == 200))
-								{
-									var data = (JObject)response["swarm_data"];
-									string flowID = (string)data["flow_id"];
+								var data = (JObject)response["swarm_data"];
+								string flowID = (string)data["flow_id"];
 
-									MesTaskDetail mesTask =  InitMesTask(iMesTask);
-									Console.WriteLine(flowID);
-									AssignMesToSwarmCore(mesTask, flowID);
-									await UpsertMesTaskForDB(mesTask);//only insert here
-									Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
-									MesTasks_WIP.Add(mesTask);
-									Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
-									OnSingleMesTaskChange(mesTask);
-									return (true, "assign success");
-								}
-								else
-								{
-									Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
-									return (false, "error occured when assigning to swarmcore");
-								}
+								MesTaskDetail mesTask = InitMesTask(iMesTask);
+								Console.WriteLine(flowID);
+								AssignMesToSwarmCore(mesTask, flowID);
+								await UpsertMesTaskForDB(mesTask);//only insert here
+								Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
+								MesTasks_WIP.Add(mesTask);
+								Log.Information("mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
+								OnSingleMesTaskChange(mesTask);
+								return (true, "assign success");
 							}
-							catch (Exception e)
+							else
 							{
 								Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
-								return (false, "error occured when assigning to swarmcore");
+								return (false, "error occured when assigning to swarmcore ("+ msg + ")");
 							}
 						}
-						//test data
-						else
+						catch (Exception e)
 						{
-							MesTaskDetail mesTask = InitMesTask(iMesTask);
-							await UpsertMesTaskForDB(mesTask);//only insert here
-							Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
-							MesTasks_WIP.Add(mesTask);
-							Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
-							OnSingleMesTaskChange(mesTask);
-							return (true, "testing assign success");
+							Log.Information("assign mesTask " + iMesTask.TaskNoFromMes + " fail");
+							return (false, "error occured when assigning to swarmcore");
 						}
+						//}
+						////test data
+						//else
+						//{
+						//	MesTaskDetail mesTask = InitMesTask(iMesTask);
+						//	await UpsertMesTaskForDB(mesTask);//only insert here
+						//	Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to db");
+						//	MesTasks_WIP.Add(mesTask);
+						//	Log.Information("testing mesTask " + mesTask.TaskNoFromMes + " is initilized and upsert to WIP");
+						//	OnSingleMesTaskChange(mesTask);
+						//	return (true, "testing assign success");
+						//}
 					}
 					break;
 				default:
@@ -1276,8 +1328,8 @@ namespace AGVServer.Service
 					}
 					else
 					{
-						//actual task not exist in swarmcore -> remove, but not remove test data
-						if (!mesTask_WIP.TaskNoFromMes.Trim().Contains("test"))
+						//actual task not exist in swarmcore -> remove
+						if (mesTask_WIP.Status == 1)
 						{
 							await RemoveFromWIP(mesTask_WIP, "auto");
 							OnSingleMesTaskChange(mesTask_WIP);
@@ -1310,35 +1362,174 @@ namespace AGVServer.Service
 			Log.Information("mesTask " + mesTask_WIP.TaskNoFromMes + " is removed from WIP");
 			await UpsertMesTaskForDB(mesTask_WIP);
 			Log.Information("mesTask " + mesTask_WIP.TaskNoFromMes + " updates finished time to DB");
+			//RefreshGroupFlag(mesTask_WIP, false);
 		}
 
 		public event Action<MesTaskDetail>? SingleMesTaskChangeAct;
 		//only used to notify UI about actual task status auto changed and test task changed manually
 		private void OnSingleMesTaskChange(MesTaskDetail mesTask) => SingleMesTaskChangeAct?.Invoke(mesTask);
 
+		public List<ImesTask> GetQueue()
+		{
+			return queueForGroup;
+		}
+		public event Action<List<ImesTask>>? QueueTaskChangeAct;
+		private void OnQueueTaskChange() => QueueTaskChangeAct?.Invoke(queueForGroup);
+		//private bool CheckFromCanAssign(ImesTask task)
+		//{
+		//	if (groups.Exists(x => x.elementList.Contains(task.FromStation) && x.occupied))
+		//	{
+		//		return false;
+		//	}
+		//	return true;
+		//}
+		//private bool CheckToCanAssign(ImesTask task)
+		//{
+		//	if (groups.Exists(x => x.elementList.Contains(task.ToStation) && x.occupied))
+		//	{
+		//		return false;
+		//	}
+		//	return true;
+		//}
+
+		//private void RefreshGroupFlag(ImesTask task, bool flagStatus)
+		//{
+		//	foreach (GroupClass group in groups)
+		//	{
+		//		if (group.elementList.Contains(task.FromStation) || group.elementList.Contains(task.ToStation))
+		//		{
+		//			group.occupied = flagStatus;
+		//		}
+		//	}
+		//	OnGroupChange();
+		//}
+
+		//public async Task CheckTaskInGRoupQueue()
+		//{
+		//	if (queueForGroup.Count > 0)
+		//	{
+		//		for (int i = 0; i < queueForGroup.Count; i++)
+		//		{
+		//			if (CheckFromCanAssign(queueForGroup[i]) && CheckToCanAssign(queueForGroup[i]))
+		//			{
+		//				await GetNewMESTask(queueForGroup[i]);
+		//				queueForGroup.Remove(queueForGroup[i]);
+		//			}
+		//		}
+		//		OnQueueTaskChange();
+		//	}
+		//}
+
+		//private void RefreshGroupFlag(MesTaskDetail task, bool flagStatus)
+		//{
+		//	foreach (GroupClass group in groups)
+		//	{
+		//		if (group.elementList.Contains(task.FromStation) || group.elementList.Contains(task.ToStation))
+		//		{
+		//			group.occupied = flagStatus;
+		//		}
+		//	}
+		//	OnGroupChange();
+		//}
+
+		//public event Action<List<GroupClass>>? GroupChangeAct;
+		//private void OnGroupChange() => GroupChangeAct?.Invoke(groups);
+
+
+		public void RefreshSchedulingTasks(bool bot, bool top)
+		{
+			using (AGVDBContext context = new AGVDBContext())
+			{
+				//neither bot nor top
+				if (!bot && !top)
+				{
+					scheduleTasks = context.ImesTasks.AsNoTracking<ImesTask>().Where(x => !x.TaskNoFromMes.Contains("BOT") && !x.TaskNoFromMes.Contains("TOP")).ToList();
+				}
+				else
+				{
+					//bot and top
+					if (bot && top)
+					{
+						scheduleTasks = context.ImesTasks.AsNoTracking<ImesTask>().Where(x => x.TaskNoFromMes.Contains("BOT") || x.TaskNoFromMes.Contains("TOP")).ToList();
+					}
+					//only bot
+					else if (bot && !top)
+					{
+						scheduleTasks = context.ImesTasks.AsNoTracking<ImesTask>().Where(x => x.TaskNoFromMes.Contains("BOT")).ToList();
+					}
+					//only top
+					else if (!bot && top)
+					{
+						scheduleTasks = context.ImesTasks.AsNoTracking<ImesTask>().Where(x => x.TaskNoFromMes.Contains("TOP")).ToList();
+					}
+				}
+				OnScheduleTasksChange();
+			}
+		}
+		public bool GetSchedulingStatus()
+		{
+			return scheduling;
+		}
+		public void PauseScheduling()
+		{
+			scheduling = false;
+			schedulingPause = true;
+			OnSchedulingChange();
+		}
+		public void ResumeScheduling()
+		{
+			schedulingPause = false;
+			scheduling = true;
+			OnSchedulingChange();
+		}
+		public void StopScheduling()
+		{
+			schedulingPause = false;
+
+			scheduling = false;
+			OnSchedulingChange();
+			scheduleTasks = new();
+			OnScheduleTasksChange();
+
+		}
 		public List<ImesTask> GetSchedulingTashs()
 		{
 			return scheduleTasks;
 		}
 		public async Task StartScheduling()
 		{
-			while (scheduleTasks.Count() > 0 || scheduleTasks != null)
+			scheduling = true;
+			OnSchedulingChange();
+			if (schedulingPause)
+			{
+				ResumeScheduling();
+				return;
+			}
+			while (scheduleTasks.Count() > 0)
 			{
 				await Task.Delay(1000);
-				for (int i = 0; i < scheduleTasks.Count(); i++)
+				if (scheduling)
 				{
-					scheduleTasks[i].DelaySecond -= 1;
-					if (scheduleTasks[i].DelaySecond <= 0)
+					for (int i = 0; i < scheduleTasks.Count(); i++)
 					{
-						await GetNewMESTask(scheduleTasks[i]);
-						scheduleTasks.Remove(scheduleTasks[i]);
+						scheduleTasks[i].DelaySecond -= 1;
+						if (scheduleTasks[i].DelaySecond <= 0)
+						{
+							await GetNewMESTask(scheduleTasks[i]);
+							scheduleTasks.Remove(scheduleTasks[i]);
+						}
 					}
+					OnScheduleTasksChange();
 				}
-				OnScheduleTasksChange();
+
 			}
+			scheduling = false;
+			OnSchedulingChange();
 		}
 		public event Action<List<ImesTask>>? ScheduleTasksChangeAct;
 		private void OnScheduleTasksChange() => ScheduleTasksChangeAct?.Invoke(scheduleTasks);
+		public event Action<bool>? SchedulingChangeAct;
+		private void OnSchedulingChange() => SchedulingChangeAct?.Invoke(scheduling);
 
 		#endregion
 

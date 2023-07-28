@@ -128,17 +128,17 @@
 								@switch (selectedTask.Status)
 								{
 									case 0://queue
-										if (selectedTask.TaskNoFromMes.Trim().Contains("test"))
+										@*if (selectedTask.TaskNoFromMes.Trim().Contains("test"))
 										{
 											<DxFormLayoutItem ColSpanMd="4" Context="fl_context">
 												<DxButton Text="Active" RenderStyle="ButtonRenderStyle.Info"
 														  Click="(async()=>{await ManuallyStartProcess(selectedTask);})">
 												</DxButton>
 											</DxFormLayoutItem>
-										}
+										}*@
 										break;
 									case 1://active
-										if (selectedTask.TaskNoFromMes.Trim().Contains("test"))
+										@*if (selectedTask.TaskNoFromMes.Trim().Contains("test"))
 										{
 											<DxFormLayoutItem ColSpanMd="4" Context="fl_context">
 												<DxButton Text="Fail" RenderStyle="ButtonRenderStyle.Danger" Click="(async()=>{await ManuallySetFail(selectedTask);})" />
@@ -146,7 +146,7 @@
 											<DxFormLayoutItem ColSpanMd="4" Context="fl_context">
 												<DxButton Text="Finish" RenderStyle="ButtonRenderStyle.Success" Click="(()=>{deleteDialogueShow = true;})" />
 											</DxFormLayoutItem>
-										}
+										}*@
 										break;
 									case 2://complete
 										break;
@@ -249,37 +249,37 @@
 	private void UpdateMesTaskStatus(MesTaskDetail task)
 	{
 		//test task
-		if (task.TaskNoFromMes.Trim().Contains("test"))
-		{
-			//add new test task
-			if (!mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes) && task.Status == 0)
-			{
-				InvokeAsync(() =>
-				{
-					mesTasks.Add(new MesTaskDetail
-						{
-							TaskNoFromMes = task.TaskNoFromMes,
-							Amrid = task.Amrid,
-							TaskNoFromSwarmCore = task.TaskNoFromSwarmCore,
-							FromStation = task.FromStation,
-							ToStation = task.ToStation,
-							Barcode = task.Barcode,
-							LoaderToAmrhighOrLow = task.LoaderToAmrhighOrLow,
-							AmrtoLoaderHighOrLow = task.AmrtoLoaderHighOrLow,
-							Priority = task.Priority,
-							Status = task.Status,
-							GetFromMesTime = task.GetFromMesTime,
-							AssignToSwarmCoreTime = task.AssignToSwarmCoreTime,
-							SwarmCoreActualStratTime = task.SwarmCoreActualStratTime,
-							FailTime = task.FailTime,
-							FinishOrTimeoutTime = task.FinishOrTimeoutTime,
-							FinishReason = task.FinishReason,
-						});
-				});
-			}
-		}
-		else
-		{
+		//if (task.TaskNoFromMes.Trim().Contains("test"))
+		//{
+		//	//add new test task
+		//	if (!mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes) && task.Status == 0)
+		//	{
+		//		InvokeAsync(() =>
+		//		{
+		//			mesTasks.Add(new MesTaskDetail
+		//				{
+		//					TaskNoFromMes = task.TaskNoFromMes,
+		//					Amrid = task.Amrid,
+		//					TaskNoFromSwarmCore = task.TaskNoFromSwarmCore,
+		//					FromStation = task.FromStation,
+		//					ToStation = task.ToStation,
+		//					Barcode = task.Barcode,
+		//					LoaderToAmrhighOrLow = task.LoaderToAmrhighOrLow,
+		//					AmrtoLoaderHighOrLow = task.AmrtoLoaderHighOrLow,
+		//					Priority = task.Priority,
+		//					Status = task.Status,
+		//					GetFromMesTime = task.GetFromMesTime,
+		//					AssignToSwarmCoreTime = task.AssignToSwarmCoreTime,
+		//					SwarmCoreActualStratTime = task.SwarmCoreActualStratTime,
+		//					FailTime = task.FailTime,
+		//					FinishOrTimeoutTime = task.FinishOrTimeoutTime,
+		//					FinishReason = task.FinishReason,
+		//				});
+		//		});
+		//	}
+		//}
+		//else
+		//{
 			//new mes task not assign to swarm core
 			if (task.Status == 0)
 			{
@@ -312,7 +312,7 @@
 			//complete & cancel
 			else if (task.Status == 2 || task.Status == 5)
 			{
-				if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes) && !task.TaskNoFromMes.Trim().Contains("test"))
+				if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
 				{
 					InvokeAsync(() =>
 					{
@@ -340,30 +340,8 @@
 						//StateHasChanged();
 					});
 				}
-				//else
-				//{
-				//	InvokeAsync(() =>
-				//	{
-				//		mesTasks.Add(new MesTask
-				//			{
-				//				TaskNoFromMes = task.TaskNoFromMes,
-				//				Amrid = task.Amrid,
-				//				FromStation = task.FromStation,
-				//				ToStation = task.ToStation,
-				//				Barcode = task.Barcode,
-				//				LoaderToAmrhighOrLow = task.LoaderToAmrhighOrLow,
-				//				AmrtoLoaderHighOrLow = task.AmrtoLoaderHighOrLow,
-				//				Priority = task.Priority,
-				//				Status = task.Status,
-				//				GetFromMesTime = task.GetFromMesTime,
-				//				AssignToSwarmCoreTime = task.AssignToSwarmCoreTime,
-				//				FinishOrTimeoutTime = task.FinishOrTimeoutTime,
-				//				FinishReason = task.FinishReason,
-				//			});
-				//	});
-				//}
 			}
-		}
+		//}
 		InvokeAsync(() =>
 					{
 						GetStastic();
