@@ -1,7 +1,5 @@
-﻿using Microsoft.VisualBasic;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 
 namespace AGVServer.EFModels
 {
@@ -16,6 +14,5 @@ namespace AGVServer.EFModels
         public bool AmrtoLoaderHighOrLow { get; set; }
         public int Priority { get; set; }
         public int DelaySecond { get; set; }
-        public string GetFromMesTime { get; set; } = null!;
     }
 }

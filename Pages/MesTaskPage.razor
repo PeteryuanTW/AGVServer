@@ -1,510 +1,910 @@
 ﻿@page "/"
 @page "/MesTask"
 @inject DataBufferService dataBufferService
+@inject ConfigService configService
 @inject UIService uiService
 
 <style>
-	.Queueing > td {
-		background-color: rgb(217, 217, 217);
-	}
+    .Queueing > td {
+        background-color: rgb(217, 217, 217);
+    }
 
-	.Running > td {
-		background-color: rgb(153, 255, 243);
-	}
+    .Running > td {
+        background-color: rgb(153, 255, 243);
+    }
 
-	.Finished > td {
-		background-color: rgb(153, 255, 165);
-	}
+    .Finished > td {
+        background-color: rgb(153, 255, 165);
+    }
 
-	.Error > td {
-		background-color: rgb(255, 51, 51);
-	}
+    .Error > td {
+        background-color: rgb(255, 51, 51);
+    }
 
-	.Pause > td {
-		background-color: rgb(255, 238, 153);
-	}
+    .Pause > td {
+        background-color: rgb(255, 238, 153);
+    }
 
-	.Cancel > td {
-		background-color: rgb(255, 51, 51);
-	}
+    .Cancel > td {
+        background-color: rgb(255, 51, 51);
+    }
 </style>
 
 <DxGridLayout>
-	<Rows>
-		<DxGridLayoutRow Height="10%" />
-		<DxGridLayoutRow Height="90%" />
-	</Rows>
-	<Columns>
-		<DxGridLayoutColumn Width="30%" />
-		<DxGridLayoutColumn Width="70%" />
-	</Columns>
-	<Items>
-		<DxGridLayoutItem Row="0" Column="0" ColumnSpan="2">
-			<Template>
-				<div class="rounded-pill" style="background-color:@titleBackground">
-					<DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" Title="WIP">
-						<Items>
-							<DxToolbarItem Text="Queue" RenderStyle="ButtonRenderStyle.Secondary" BeginGroup="true" Enabled="false">
-								@context.Text
-								<span class="rounded" style="margin-left:10px; vertical-align:central">@queueCount</span>
-							</DxToolbarItem>
-							<DxToolbarItem Text="Running" RenderStyle="ButtonRenderStyle.Info" BeginGroup="true" Enabled="false">
-								@context.Text
-								<span class="rounded" style="margin-left:10px; vertical-align:central">@runningCount</span>
-							</DxToolbarItem>
-							<DxToolbarItem Text="Fail" RenderStyle="ButtonRenderStyle.Danger" BeginGroup=" true" Enabled="false">
-								@context.Text
-								<span class="rounded" style="margin-left:10px; vertical-align:central">@failCount</span>
-							</DxToolbarItem>
-							@*<DxToolbarItem Text="Pause" RenderStyle="ButtonRenderStyle.Warning" BeginGroup="true" Enabled="false">
-							@context.Text
-							<span class="rounded" style="margin-left:10px; vertical-align:central">@pauseCount</span>
-							</DxToolbarItem>*@
-						</Items>
-					</DxToolbar>
-				</div>
-			</Template>
-		</DxGridLayoutItem>
-		<DxGridLayoutItem Row="1" Column="0">
-			<Template>
-				<div>
-					<DxGrid Data="@mesTasks" PageSize="10" AllowSort="false" FocusedRowEnabled="true" FocusedRowChanged="OnSelectTaskChanged" CustomizeCellDisplayText="@SetUnboundColumn" CustomizeElement="GetTaskStatusCss">
-						<Columns>
-							<DxGridDataColumn Caption="Mes no." FieldName="TaskNoFromMes" />
-							<DxGridDataColumn Caption="Status" FieldName="Status" />
-						</Columns>
-					</DxGrid>
-				</div>
-			</Template>
-		</DxGridLayoutItem>
-		<DxGridLayoutItem Row="1" Column="1">
-			<Template>
-				<div>
-					<DxFormLayout>
-						@if (selectedTask != null)
-						{
-							<DxFormLayoutGroup Caption="@selectedTask.TaskNoFromMes">
-								<DxFormLayoutItem Caption="Task Type:">
-									<DxSpinEdit Value="@selectedTask.TaskType" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="From:">
-									<DxTextBox Text="@selectedTask.FromStation" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="To:">
-									<DxTextBox Text="@selectedTask.ToStation" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="Barcode:">
-									<DxTextBox Text="@selectedTask.Barcode" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="Loader to AMR high port:">
-									<DxCheckBox Checked="@selectedTask.LoaderToAmrhighOrLow" Enabled="false"></DxCheckBox>
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="AMR to Loader high port:">
-									<DxCheckBox Checked="@selectedTask.AmrtoLoaderHighOrLow" Enabled="false"></DxCheckBox>
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="Status:">
-									<DxSpinEdit Value="@selectedTask.Status" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="Get From Mes:">
-									<DxTextBox Text="@selectedTask.GetFromMesTime" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="Assign To SwarmCore:">
-									<DxTextBox Text="@selectedTask.AssignToSwarmCoreTime" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="SwarmCore Start Task:">
-									<DxTextBox Text="@selectedTask.SwarmCoreActualStratTime" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="SwarmCore Task no:">
-									<DxTextBox Text="@selectedTask.TaskNoFromSwarmCore" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="AMR ID:">
-									<DxTextBox Text="@selectedTask.Amrid" Enabled="false" />
-								</DxFormLayoutItem>
-								<DxFormLayoutItem Caption="Interrupt Time(Fail or Pause):">
-									<DxTextBox Text="@selectedTask.FailTime" Enabled="false" />
-								</DxFormLayoutItem>
-							</DxFormLayoutGroup>
-							<DxFormLayoutGroup Caption="Operations">
-								@switch (selectedTask.Status)
-								{
-									case 0://queue
-										@*if (selectedTask.TaskNoFromMes.Trim().Contains("test"))
-										{
-											<DxFormLayoutItem ColSpanMd="4" Context="fl_context">
-												<DxButton Text="Active" RenderStyle="ButtonRenderStyle.Info"
-														  Click="(async()=>{await ManuallyStartProcess(selectedTask);})">
-												</DxButton>
-											</DxFormLayoutItem>
-										}*@
-										break;
-									case 1://active
-										@*if (selectedTask.TaskNoFromMes.Trim().Contains("test"))
-										{
-											<DxFormLayoutItem ColSpanMd="4" Context="fl_context">
-												<DxButton Text="Fail" RenderStyle="ButtonRenderStyle.Danger" Click="(async()=>{await ManuallySetFail(selectedTask);})" />
-											</DxFormLayoutItem>
-											<DxFormLayoutItem ColSpanMd="4" Context="fl_context">
-												<DxButton Text="Finish" RenderStyle="ButtonRenderStyle.Success" Click="(()=>{deleteDialogueShow = true;})" />
-											</DxFormLayoutItem>
-										}*@
-										break;
-									case 2://complete
-										break;
-									case 3://fail
-										<DxFormLayoutItem ColSpanMd="4" Context="fl_context">
-											<DxButton Text="Finish" RenderStyle="ButtonRenderStyle.Danger" Click="(()=>{deleteDialogueShow = true;})" />
-										</DxFormLayoutItem>
-										break;
-									case 4://pause
-										break;
-									case 5://Cancel
-										break;
-									default:
-										break;
+    <Rows>
+        <DxGridLayoutRow Height="10%" />
+        <DxGridLayoutRow Height="80%" />
+        <DxGridLayoutRow Height="10%" />
+    </Rows>
+    <Columns>
+        <DxGridLayoutColumn Width="30%" />
+        <DxGridLayoutColumn Width="70%" />
+    </Columns>
+    <Items>
+        <DxGridLayoutItem Row="0" Column="0">
+            <Template>
+                <div class="rounded-pill" style="background-color:@titleBackground">
+                    <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" Title="WIP">
+                        <Items>
+                            <DxToolbarItem Text="Queue" RenderStyle="ButtonRenderStyle.Secondary" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@queueCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Running" RenderStyle="ButtonRenderStyle.Info" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@runningCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Pause" RenderStyle="ButtonRenderStyle.Warning" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@pauseCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Fail" RenderStyle="ButtonRenderStyle.Danger" BeginGroup=" true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@failCount</span>
+                            </DxToolbarItem>
+                        </Items>
+                    </DxToolbar>
+                </div>
+            </Template>
+        </DxGridLayoutItem>
+        <DxGridLayoutItem Row="0" Column="1">
+            <Template>
+                <div style="text-align:left">
+                    <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="Manual Assign" Click="(()=>{addTaskDialogueVisible = true; InitNewTaskParameter();})"></DxButton>
+                </div>
+            </Template>
+        </DxGridLayoutItem>
+        <DxGridLayoutItem Row="1" Column="0">
+            <Template>
+                <div>
+                    <DxGrid @ref="myGrid" Data="@mesTasks" PageSize="10" AllowSort="false" FocusedRowEnabled="true" FocusedRowChanged="OnFocusedTaskChanged" CustomizeCellDisplayText="@SetUnboundColumn" CustomizeElement="GetTaskStatusCss">
+                        <Columns>
+                            <DxGridDataColumn Caption="Mes no." FieldName="TaskNoFromMes" Width="80%" />
+                            <DxGridDataColumn Caption="Status" FieldName="Status" Width="20%" />
+                        </Columns>
+                    </DxGrid>
+                </div>
+            </Template>
+        </DxGridLayoutItem>
+        <DxGridLayoutItem Row="1" Column="1">
+            <Template>
+                <div>
+                    <DxFormLayout>
+                        @if (selectedTask != null)
+                        {
+                            <DxFormLayoutGroup Caption="@selectedTask.TaskNoFromMes">
+                                <DxFormLayoutItem Caption="Task Type:">
+                                    <DxSpinEdit Value="@selectedTask.TaskType" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="From:">
+                                    <DxTextBox Text="@selectedTask.FromStation" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="To:">
+                                    <DxTextBox Text="@selectedTask.ToStation" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Barcode:">
+                                    <DxTextBox Text="@selectedTask.Barcode" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Loader to AMR high port:">
+                                    <DxCheckBox Checked="@selectedTask.LoaderToAmrhighOrLow" CheckType="CheckType.Switch" Enabled="false"></DxCheckBox>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="AMR to Loader high port:">
+                                    <DxCheckBox Checked="@selectedTask.AmrtoLoaderHighOrLow" CheckType="CheckType.Switch" Enabled="false"></DxCheckBox>
+                                </DxFormLayoutItem>
+                                @*<DxFormLayoutItem Caption="Status:">
+                                    <DxSpinEdit Value="@selectedTask.Status" Enabled="false" />
+                                </DxFormLayoutItem>*@
+                                <DxFormLayoutItem Caption="Get From Mes:">
+                                    <DxTextBox Text="@selectedTask.GetFromMesTime" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Assign To SwarmCore:">
+                                    <DxTextBox Text="@selectedTask.AssignToSwarmCoreTime" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="SwarmCore Start Task:">
+                                    <DxTextBox Text="@selectedTask.SwarmCoreActualStratTime" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="SwarmCore Task no:">
+                                    <DxTextBox Text="@selectedTask.TaskNoFromSwarmCore" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="AMR ID:">
+                                    <DxTextBox Text="@selectedTask.Amrid" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="AMR Name:">
+                                    <DxTextBox Text="@AmridToNo(selectedTask.Amrid)" Enabled="false" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Interrupt Time(Fail or Pause):">
+                                    <DxTextBox Text="@selectedTask.FailTime" Enabled="false" />
+                                </DxFormLayoutItem>
+                            </DxFormLayoutGroup>
+                            <DxFormLayoutGroup Caption="Flow Detail">
+                                @if (flowDetail != null)
+                                {
+                                    <DxFormLayoutItem Caption="Complete Percentage" ColSpanLg="6">
+                                        <DxSpinEdit Value="@flowDetail.percentage" Mask="@NumericMask.Percentage" Enabled="false" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Step" ColSpanLg="6">
+                                        <DxTextBox Text="@flowDetail.custom_info" Enabled="false" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Actual Barcode" ColSpanLg="6" BeginRow="true">
+                                        <DxTextBox Text="@barcode" Enabled="false" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Error Code" ColSpanLg="6">
+                                        <DxTextBox Text="@dataBufferService.GetTaskErrorCode(selectedTask.TaskNoFromMes)" Enabled="false" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Log Message" ColSpanLg="12">
+                                        <DxTextBox Text="@flowDetail.status_msg" Enabled="false" />
+                                    </DxFormLayoutItem>
 
-								}
-							</DxFormLayoutGroup>
-						}
-					</DxFormLayout>
-				</div>
-			</Template>
-		</DxGridLayoutItem>
-	</Items>
+                                }
+                            </DxFormLayoutGroup>
+                            <DxFormLayoutGroup Caption="Operations">
+                                @switch (selectedTask.Status)
+                                {
+                                    case 0://queue
+                                        <DxFormLayoutItem ColSpanMd="4" Context="fl_context">
+                                            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger"
+                                                      Click="(async()=>{deleteDialogueShow = true;})">
+                                            </DxButton>
+                                        </DxFormLayoutItem>
+                                        break;
+                                    case 1://active
+                                        <DxFormLayoutItem ColSpanMd="4" Context="fl_context">
+                                            <DxButton Text="Pause" RenderStyle="ButtonRenderStyle.Warning"
+                                                      Click="(async()=>{await PauseTask(selectedTask);})">
+                                            </DxButton>
+                                            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger"
+                                                      Click="(async()=>{deleteDialogueShow = true;})">
+                                            </DxButton>
+                                        </DxFormLayoutItem>
+                                        break;
+                                    case 2://complete
+                                        break;
+                                    case 3://fail
+                                        <DxFormLayoutItem ColSpanMd="4" Context="fl_context">
+                                            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger" Click="(async ()=>{deleteDialogueShow = true;})" />
+                                        </DxFormLayoutItem>
+                                        @if (dataBufferService.GetTaskErrorCode(selectedTask.TaskNoFromMes) == "M001" || dataBufferService.GetTaskErrorCode(selectedTask.TaskNoFromMes) == "M002")
+                                        {
+                                            <DxFormLayoutItem ColSpanMd="4" Context="fl_context">
+                                                <DxButton Text="Revise Task" RenderStyle="ButtonRenderStyle.Danger" Click="(()=>{reviseDialogueShow = true; InitNewReviseTaskParameter();})" />
+                                            </DxFormLayoutItem>
+                                        }
+                                        break;
+                                    case 4://pause
+                                        <DxFormLayoutItem ColSpanMd="4" Context="fl_context">
+                                            <DxButton Text="Resume" RenderStyle="ButtonRenderStyle.Warning"
+                                                      Click="(async()=>{await ResumeTask(selectedTask);})">
+                                            </DxButton>
+                                            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger"
+                                                      Click="(async()=>{deleteDialogueShow = true;})">
+                                            </DxButton>
+                                        </DxFormLayoutItem>
+                                        break;
+                                    case 5://Cancel
+                                        break;
+                                    default:
+                                        break;
+
+                                }
+                            </DxFormLayoutGroup>
+                        }
+                    </DxFormLayout>
+                </div>
+            </Template>
+        </DxGridLayoutItem>
+    </Items>
 </DxGridLayout>
 @if (selectedTask != null)
 {
-	<DxPopup @bind-Visible="@deleteDialogueShow" HeaderText="Remove WIP" ShowFooter="true">
-		<BodyContentTemplate>
-			<DeleteWIPDialogue mesTask="@selectedTask"></DeleteWIPDialogue>
-		</BodyContentTemplate>
-		<FooterContentTemplate>
-			<DxButton Enabled="@(!sending)" RenderStyle="ButtonRenderStyle.Danger" Click="(async ()=> {await ManuallyFinish(selectedTask);sending = false;deleteDialogueShow = false;})" Context="btn_context">
-				<div>
-					<DxWaitIndicator Visible="@sending" />
-					<span>@btnText</span>
-				</div>
-			</DxButton>
-		</FooterContentTemplate>
-	</DxPopup>
+    <DxPopup @bind-Visible="@deleteDialogueShow" HeaderText="Remove WIP" ShowFooter="true">
+        <BodyContentTemplate>
+            <div>Sure about delete @selectedTask.TaskNoFromMes when @((DataBufferService.TaskStatus)selectedTask.Status) - @flowDetail.custom_info @dataBufferService.GetTaskErrorCode(selectedTask.TaskNoFromMes)?</div>
+        </BodyContentTemplate>
+        <FooterContentTemplate>
+            <DxButton Enabled="@(!sending)" RenderStyle="ButtonRenderStyle.Danger" Click="(async ()=> {await CancelTask(selectedTask);sending = false;deleteDialogueShow = false;})" Context="btn_context">
+                <div>
+                    <DxWaitIndicator Visible="@sending" />
+                    <span>@btnText</span>
+                </div>
+            </DxButton>
+        </FooterContentTemplate>
+    </DxPopup>
 }
+<DxPopup @bind-Visible="@addTaskDialogueVisible" HeaderText="New Task" ShowFooter="true" CloseOnOutsideClick="false">
+    <BodyContentTemplate Context="PopupContext">
+        <DxFormLayout>
+            <DxFormLayoutItem Caption="Task type:" BeginRow=true ColSpanMd="12">
+                <DxSpinEdit Value="@taskType" ValueChanged="(int taskType)=>{this.taskType = taskType; CheckFromToEnable(taskType);}" MinValue="0" MaxValue="2"></DxSpinEdit>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Task no:" BeginRow=true ColSpanMd="12">
+                <DxTextBox @bind-Text="@mesTaskNo"></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Barcode(AD-MZY00-xxx):" BeginRow=true ColSpanMd="12">
+                <DxTextBox @bind-Text="@mazNum"></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="From:" BeginRow=true ColSpanMd="12">
+                <DxComboBox Data="@fromList" Value="@from" ValueChanged="((string s)=>{CheckFromPos(s);})" Enabled="@fromEnable"></DxComboBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="From High:" BeginRow=true ColSpanMd="12">
+                <DxCheckBox @bind-Checked="@fromHigh" CheckType="CheckType.Switch" Enabled="@fromPosEnable"></DxCheckBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="To:" BeginRow=true ColSpanMd="12">
+                <DxComboBox Data="@toList" Value="@to" ValueChanged="((string s)=>{CheckToPos(s);})" Enabled="@toEnable"></DxComboBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="To High:" BeginRow=true ColSpanMd="12">
+                <DxCheckBox @bind-Checked="@toHigh" CheckType="CheckType.Switch" Enabled="@toPosEnable"></DxCheckBox>
+            </DxFormLayoutItem>
+        </DxFormLayout>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        <DxButton Enabled="@(!newSending)" RenderStyle="ButtonRenderStyle.Primary" Click="(async ()=> {await ManuallyAssign();})" Context="newBtn_context">
+            <div>
+                <DxWaitIndicator Visible="@newSending" />
+                <span>@newBtnText</span>
+            </div>
+        </DxButton>
+    </FooterContentTemplate>
+</DxPopup>
+
+<DxPopup @bind-Visible="@reviseDialogueShow" HeaderText="New Revise Task" ShowFooter="true" CloseOnOutsideClick="false">
+    <BodyContentTemplate Context="PopupContext">
+        <DxFormLayout>
+            <DxFormLayoutItem Caption="Original TaskNo:" BeginRow=true ColSpanMd="12">
+                <DxTextBox @bind-Text="@originalMesTaskNo" Enabled="false"></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Revise TaskNo:" BeginRow=true ColSpanMd="12">
+                <DxTextBox @bind-Text="@newReviseTaskMesNo" Enabled="false"></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Original Barcode:" BeginRow=true ColSpanMd="12">
+                <DxTextBox @bind-Text="@selectedTask.Barcode" Enabled="false"></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="new Barcode:" BeginRow=true ColSpanMd="12">
+                <DxTextBox @bind-Text="@barcode_rev" Enabled="true"></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="To:" BeginRow=true ColSpanMd="12">
+                <DxComboBox Data="@revTo" Value="@to_rev"></DxComboBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="To High:" BeginRow=true ColSpanMd="12">
+                <DxCheckBox @bind-Checked="@toHigh_rev" CheckType="CheckType.Switch"></DxCheckBox>
+            </DxFormLayoutItem>
+        </DxFormLayout>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        <DxButton Enabled="@(!reviseSending)" RenderStyle="ButtonRenderStyle.Primary" Click="(async ()=> {await ManuallyRevise();})" Context="newBtn_context">
+            <div>
+                <DxWaitIndicator Visible="@reviseSending" />
+                <span>@newBtnText</span>
+            </div>
+        </DxButton>
+    </FooterContentTemplate>
+</DxPopup>
 
 @code {
-	private List<MesTaskDetail> mesTasks;
-	private MesTaskDetail selectedTask;
+    IGrid myGrid { get; set; }
+    private List<MesTaskDetail> mesTasks;
+    private MesTaskDetail selectedTask;
+    private FlowTaskStatus flowDetail;
 
-	private int total = 0;
-	private int queueCount = 0;
-	private int runningCount = 0;
-	private int failCount = 0;
-	private int pauseCount = 0;
+    private int total = 0;
+    private int queueCount = 0;
+    private int runningCount = 0;
+    private int failCount = 0;
+    private int pauseCount = 0;
 
-	private bool deleteDialogueShow = false;
+    private bool deleteDialogueShow = false;
+    private bool sending = false;
+    private string btnText => sending ? "" : "Cancel";
+
+    private bool newSending = false;
+    private string newBtnText => newSending ? "" : "Assign";
+
+    private bool reviseDialogueShow = false;
+    private bool reviseSending = false;
+    private string reviseBtnText => reviseSending ? "" : "Assign";
+
+    private string titleBackground = "rgb(255,255,255)";
+
+    private bool addTaskDialogueVisible = false;
+    private int taskType;
+    private string mesTaskNo;
+    private string mazNum;
+    private List<string> fromList;
+    private string from;
+    private bool fromEnable;
+    private bool fromPosEnable;
+    private bool fromHigh;
+    private List<string> toList;
+    private string to;
+    private bool toEnable;
+    private bool toPosEnable;
+    private bool toHigh;
+    //top in but out
+    private List<string> topin_butout = new List<string> { "XRCU01", "XRCU02", "XRCU03", "XRCU04", "DICU01", "DICU02", "SMCP01", "SMCU01", "SMCU02", "RVCP02" };
+    //top out but oin
+    private List<string> topout_butin = new List<string> { "XRCL01", "XRCL02", "DICL01", "SMCL01" };
+    private string barcode = "";
+    private bool withMZY = false;
+
+    private List<string> revTo = new List<string> { /*"XRCU03",*/ "STCL01", "STCL03", "STCL05" };
+    private string originalMesTaskNo;
+    private string newReviseTaskMesNo;
+    private string to_rev;
+    private bool toHigh_rev;
+    private string barcode_rev;
 
 
-	private bool sending = false;
-	private string btnText => sending ? "" : "send";
+    protected override Task OnInitializedAsync()
+    {
+        uiService.ShowPanel("Loading...");
+        mesTasks = dataBufferService.GetWIPTasks().ToList();
+        dataBufferService.SingleMesTaskChangeAct += UpdateMesTaskStatus;
+        dataBufferService.MesTaskCancelAct += GetCancelFromAPI;
+        dataBufferService.SingleFlowTaskStatusChangeAct += GetFlowDetail;
+        InitNewTaskParameter();
+        fromEnable = true;
+        return base.OnInitializedAsync();
+    }
 
-	private string testTaskid = "test_task_id";
-	private string testTaskAmrid = "test_amr_id";
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            uiService.ClosePanel();
+            await RedirectSelectTask();
+        }
+        //return base.OnAfterRenderAsync(firstRender);
+    }
 
-	private string titleBackground = "rgb(255,255,255)";
+    private async Task RedirectSelectTask()
+    {
+        if (mesTasks.Count > 0)
+        {
+            selectedTask = mesTasks.FirstOrDefault();
+            if (selectedTask != null)
+            {
+                await myGrid.SetFocusedDataItemAsync(selectedTask);
+            }
+        }
+        else
+        {
+            selectedTask = null;
+            await myGrid.SetFocusedDataItemAsync(null);
+        }
+        flowDetail = selectedTask == null ? null : dataBufferService.GetSwarmCoreTaskStatus().FirstOrDefault(x => x.flowid == selectedTask.TaskNoFromSwarmCore);
+        GetStastic();
+    }
 
-	protected override Task OnInitializedAsync()
-	{
-		uiService.ShowPanel("Loading...");
-		mesTasks = dataBufferService.GetWIPTasks().ToList();
-		RedirectSelectTask();
-		dataBufferService.SingleMesTaskChangeAct += UpdateMesTaskStatus;
+    private async Task OnFocusedTaskChanged(GridFocusedRowChangedEventArgs e)
+    {
+        //InvokeAsync(() =>
+        //{
+        selectedTask = e.DataItem == null ? null : e.DataItem as MesTaskDetail;
+        if (myGrid != null)
+        {
+            await myGrid.SetFocusedDataItemAsync(selectedTask);
+        }
+        flowDetail = selectedTask == null ? null : dataBufferService.GetSwarmCoreTaskStatus().FirstOrDefault(x => x.flowid == selectedTask.TaskNoFromSwarmCore);
+        StateHasChanged();
+        //});
+    }
 
-		return base.OnInitializedAsync();
-	}
+    private void UpdateMesTaskStatus(MesTaskDetail task)
+    {
 
-	protected override Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (firstRender)
-		{
-			uiService.ClosePanel();
-		}
-		return base.OnAfterRenderAsync(firstRender);
-	}
+        //new mes task not assign to swarm core
+        if (task.Status == 0)
+        {
+            if (!mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
+            {
+                InvokeAsync(() =>
+                {
+                    mesTasks.Add(new MesTaskDetail
+                        {
+                            TaskNoFromMes = task.TaskNoFromMes,
+                            TaskNoFromSwarmCore = task.TaskNoFromSwarmCore,
+                            Amrid = task.Amrid,
+                            FromStation = task.FromStation,
+                            ToStation = task.ToStation,
+                            Barcode = task.Barcode,
+                            LoaderToAmrhighOrLow = task.LoaderToAmrhighOrLow,
+                            AmrtoLoaderHighOrLow = task.AmrtoLoaderHighOrLow,
+                            Priority = task.Priority,
+                            Status = task.Status,
+                            GetFromMesTime = task.GetFromMesTime,
+                            AssignToSwarmCoreTime = task.AssignToSwarmCoreTime,
+                            FailTime = task.FailTime,
+                            FinishOrTimeoutTime = task.FinishOrTimeoutTime,
+                            FinishReason = task.FinishReason,
+                        });
+                    //StateHasChanged();
+                });
 
-	private void RedirectSelectTask()
-	{
-		if (mesTasks != null || mesTasks.Count > 0)
-		{
-			selectedTask = mesTasks.FirstOrDefault();
-		}
-		GetStastic();
-	}
+            }
+        }
+        //complete & cancel
+        else if (task.Status == 2 || task.Status == 5)
+        {
+            if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
+            {
+                InvokeAsync(() =>
+                {
+                    MesTaskDetail targetTask = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == task.TaskNoFromMes);
+                    mesTasks.Remove(targetTask);
+                    selectedTask = null;
+                    //StateHasChanged();
+                });
+            }
+        }
+        //update mes task  status (active & pause & fail) assigned to swarm core
+        else
+        {
+            if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
+            {
+                InvokeAsync(() =>
+                {
+                    MesTaskDetail targetTask = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == task.TaskNoFromMes);
+                    targetTask.Status = task.Status;
+                    targetTask.Amrid = task.Amrid;
+                    targetTask.TaskNoFromSwarmCore = task.TaskNoFromSwarmCore;
+                    targetTask.AssignToSwarmCoreTime = task.AssignToSwarmCoreTime;
+                    targetTask.SwarmCoreActualStratTime = task.SwarmCoreActualStratTime;
+                    targetTask.FailTime = task.FailTime;
+                    //StateHasChanged();
+                });
+            }
+        }
+        //}
+        InvokeAsync(() =>
+                    {
+                        GetStastic();
+                        RedirectSelectTask();
+                        StateHasChanged();
+                    });
 
-	private void OnSelectTaskChanged(GridFocusedRowChangedEventArgs e)
-	{
-		InvokeAsync(() =>
-		{
-			selectedTask = e.DataItem == null ? null : e.DataItem as MesTaskDetail;
-			StateHasChanged();
-		});
-	}
+    }
 
-	private void UpdateMesTaskStatus(MesTaskDetail task)
-	{
-		//test task
-		//if (task.TaskNoFromMes.Trim().Contains("test"))
-		//{
-		//	//add new test task
-		//	if (!mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes) && task.Status == 0)
-		//	{
-		//		InvokeAsync(() =>
-		//		{
-		//			mesTasks.Add(new MesTaskDetail
-		//				{
-		//					TaskNoFromMes = task.TaskNoFromMes,
-		//					Amrid = task.Amrid,
-		//					TaskNoFromSwarmCore = task.TaskNoFromSwarmCore,
-		//					FromStation = task.FromStation,
-		//					ToStation = task.ToStation,
-		//					Barcode = task.Barcode,
-		//					LoaderToAmrhighOrLow = task.LoaderToAmrhighOrLow,
-		//					AmrtoLoaderHighOrLow = task.AmrtoLoaderHighOrLow,
-		//					Priority = task.Priority,
-		//					Status = task.Status,
-		//					GetFromMesTime = task.GetFromMesTime,
-		//					AssignToSwarmCoreTime = task.AssignToSwarmCoreTime,
-		//					SwarmCoreActualStratTime = task.SwarmCoreActualStratTime,
-		//					FailTime = task.FailTime,
-		//					FinishOrTimeoutTime = task.FinishOrTimeoutTime,
-		//					FinishReason = task.FinishReason,
-		//				});
-		//		});
-		//	}
-		//}
-		//else
-		//{
-			//new mes task not assign to swarm core
-			if (task.Status == 0)
-			{
-				if (!mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
-				{
-					InvokeAsync(() =>
-					{
-						mesTasks.Add(new MesTaskDetail
-							{
-								TaskNoFromMes = task.TaskNoFromMes,
-								Amrid = task.Amrid,
-								FromStation = task.FromStation,
-								ToStation = task.ToStation,
-								Barcode = task.Barcode,
-								LoaderToAmrhighOrLow = task.LoaderToAmrhighOrLow,
-								AmrtoLoaderHighOrLow = task.AmrtoLoaderHighOrLow,
-								Priority = task.Priority,
-								Status = task.Status,
-								GetFromMesTime = task.GetFromMesTime,
-								AssignToSwarmCoreTime = task.AssignToSwarmCoreTime,
-								FailTime = task.FailTime,
-								FinishOrTimeoutTime = task.FinishOrTimeoutTime,
-								FinishReason = task.FinishReason,
-							});
-						//StateHasChanged();
-					});
+    //private async Task ManuallyStartProcess(MesTaskDetail task)
+    //{
+    //    dataBufferService.AssignMesToSwarmCore(selectedTask, testTaskid);
+    //    await dataBufferService.SwarmCoreStartProcessing(selectedTask, testTaskAmrid);
+    //    GetStastic();
+    //    uiService.ShowPopup(PPopupType.Info, "Init task and assibn to swarmcore success");
+    //}
 
-				}
-			}
-			//complete & cancel
-			else if (task.Status == 2 || task.Status == 5)
-			{
-				if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
-				{
-					InvokeAsync(() =>
-					{
-						MesTaskDetail targetTask = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == task.TaskNoFromMes);
-						mesTasks.Remove(targetTask);
-						selectedTask = null;
-						//StateHasChanged();
-					});
-				}
-			}
-			//update mes task  status (active & pause & fail) assigned to swarm core
-			else
-			{
-				if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
-				{
-					InvokeAsync(() =>
-					{
-						MesTaskDetail targetTask = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == task.TaskNoFromMes);
-						targetTask.Status = task.Status;
-						targetTask.Amrid = task.Amrid;
-						targetTask.TaskNoFromSwarmCore = task.TaskNoFromSwarmCore;
-						targetTask.AssignToSwarmCoreTime = task.AssignToSwarmCoreTime;
-						targetTask.SwarmCoreActualStratTime = task.SwarmCoreActualStratTime;
-						targetTask.FailTime = task.FailTime;
-						//StateHasChanged();
-					});
-				}
-			}
-		//}
-		InvokeAsync(() =>
-					{
-						GetStastic();
-						RedirectSelectTask();
-						StateHasChanged();
-					});
+    //private async Task ManuallySetFail(MesTaskDetail task)
+    //{
+    //    //dataBufferService.AssignMesToSwarmCore(selectedTask, testTaskid);
+    //    task.FailTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
+    //    await dataBufferService.SwarmCoreUpdateStatusFailPauseWithTimeLog(task, 3);
+    //    GetStastic();
+    //    uiService.ShowPopup(PPopupType.Info, "Set task fail success");
+    //}
 
-	}
+    //private async Task ManuallyFinish(MesTaskDetail task)
+    //{
+    //    mesTasks.Remove(task);
+    //    await dataBufferService.RemoveFromWIP(task, task.FinishReason);
+    //    GetStastic();
+    //    RedirectSelectTask();
+    //    uiService.ShowPopup(PPopupType.Info, "Finish task success");
+    //}
 
-	private async Task ManuallyStartProcess(MesTaskDetail task)
-	{
-		dataBufferService.AssignMesToSwarmCore(selectedTask, testTaskid);
-		await dataBufferService.SwarmCoreStartProcessing(selectedTask, testTaskAmrid);
-		GetStastic();
-		uiService.ShowPopup(PPopupType.Info, "Init task and assibn to swarmcore success");
-	}
+    private async Task CancelTask(MesTaskDetail task)
+    {
+        //string reason = "unknown";
+        //switch (task.Status)
+        //{
+        //    case 0:
+        //        task.FinishReason = "cancel when queue";
+        //        break;
+        //    case 1:
+        //    case 3:
+        //    case 4:
+        //        task.FinishReason = "cancel when " + (DataBufferService.TaskStatus)task.Status + "-" + flowDetail.custom_info;
+        //        break;
+        //    default:
+        //        break;
+        //}
+        (bool, string) res = await dataBufferService.CancelWIPTask(task.TaskNoFromMes);
+        if (res.Item1)
+        {
+            GetStastic();
+            mesTasks.Remove(task);
+            await RedirectSelectTask();
+            uiService.ShowPopup(PPopupType.Success, "cancel when "+res.Item2);
+        }
+        else
+        {
+            uiService.ShowPopup(PPopupType.Dangerous, res.Item2);
+        }
+    }
 
-	private async Task ManuallySetFail(MesTaskDetail task)
-	{
-		//dataBufferService.AssignMesToSwarmCore(selectedTask, testTaskid);
-		task.FailTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
-		await dataBufferService.SwarmCoreUpdateStatusFailPauseWithTimeLog(task, 3);
-		GetStastic();
-		uiService.ShowPopup(PPopupType.Info, "Set task fail success");
-	}
+    private void GetCancelFromAPI(MesTaskDetail delTask)
+    {
+        if (mesTasks.Exists(x => x.TaskNoFromMes == delTask.TaskNoFromMes))
+        {
+            MesTaskDetail target = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == delTask.TaskNoFromMes);
+            InvokeAsync(() =>
+                    {
+                        mesTasks.Remove(target);
+                        GetStastic();
+                        //RedirectSelectTask();
+                        StateHasChanged();
+                    });
+        }
 
-	private async Task ManuallyFinish(MesTaskDetail task)
-	{
-		mesTasks.Remove(task);
-		await dataBufferService.RemoveFromWIP(task, task.FinishReason);
-		if (!task.TaskNoFromMes.Contains("test"))
-		{
-			await dataBufferService.DeleteTaskFromSwarmCore(task);
-		}
-		GetStastic();
-		RedirectSelectTask();
-		uiService.ShowPopup(PPopupType.Info, "Finish task success");
-	}
+    }
 
-	private void GetStastic()
-	{
-		InvokeAsync(() =>
-				{
-					if (mesTasks.Count > 0)
-					{
-						total = mesTasks.Count();
-						queueCount = mesTasks.Count(x => x.Status == 0);
-						runningCount = mesTasks.Count(x => x.Status == 1);
-						failCount = mesTasks.Count(x => x.Status == 3);
-						pauseCount = mesTasks.Count(x => x.Status == 4);
-					}
-					else
-					{
-						total = 0;
-						queueCount = 0;
-						runningCount = 0;
-						failCount = 0;
-						pauseCount = 0;
-					}
-					RefreshTitleColorStr();
-					StateHasChanged();
-				});
-	}
+    private async Task PauseTask(MesTaskDetail task)
+    {
+        (bool, string) res = await dataBufferService.PauseTaskFromSwarmCore(task);
+        if (res.Item1)
+        {
+            GetStastic();
+            //mesTasks.Remove(task);
+            //RedirectSelectTask();
+            uiService.ShowPopup(PPopupType.Success, res.Item2);
+        }
+        else
+        {
+            uiService.ShowPopup(PPopupType.Dangerous, res.Item2);
+        }
+    }
 
-	private void RefreshTitleColorStr()
-	{
-		if (failCount > 0)
-		{
-			titleBackground = "rgb(255, 204, 204)";
-		}
-		else
-		{
-			if (runningCount > 0)
-			{
-				titleBackground = "rgb(204, 229, 255)";
-			}
-			else
-			{
-				if (queueCount > 0)
-				{
-					titleBackground = "rgb(217, 217, 217)";
-				}
-				else
-				{
-					titleBackground = "rgb(255, 255, 255)";
-				}
-			}
-		}
-	}
+    private async Task ResumeTask(MesTaskDetail task)
+    {
+        (bool, string) res = await dataBufferService.ResumeTaskFromSwarmCore(task);
+        if (res.Item1)
+        {
+            GetStastic();
+            //mesTasks.Remove(task);
+            //RedirectSelectTask();
+            uiService.ShowPopup(PPopupType.Success, res.Item2);
+        }
+        else
+        {
+            uiService.ShowPopup(PPopupType.Dangerous, res.Item2);
+        }
+    }
 
-	private void SetUnboundColumn(GridCustomizeCellDisplayTextEventArgs e)
-	{
-		//Console.WriteLine(e.FieldName);
-		if (e.FieldName == "LoaderToAmrhighOrLow")
-		{
-			bool tmp = Convert.ToBoolean(e.GetRowValue("LoaderToAmrhighOrLow"));
-			e.DisplayText = tmp ? "Top" : "Bottom";
-		}
-		else if (e.FieldName == "AmrtoLoaderHighOrLow")
-		{
-			bool tmp = Convert.ToBoolean(e.GetRowValue("AmrtoLoaderHighOrLow"));
-			e.DisplayText = tmp ? "Top" : "Bottom";
-		}
-		else if (e.FieldName == "Status")
-		{
-			int tmp = Convert.ToInt32(e.GetRowValue("Status"));
-			if (tmp == 0)
-			{
-				e.DisplayText = "Queueing";
-			}
-			else if (tmp == 1)
-			{
-				e.DisplayText = "Running";
-			}
-			else if (tmp == 2)
-			{
-				e.DisplayText = "Finished";
-			}
-			else if (tmp == 3)
-			{
-				e.DisplayText = "Error";
-			}
-			else if (tmp == 4)
-			{
-				e.DisplayText = "Pause";
-			}
-			else if (tmp == 5)
-			{
-				e.DisplayText = "Cancel";
-			}
-		}
-	}
+    private async Task ManuallyAssign()
+    {
+        newSending = true;
+        ImesTask newTask = new ImesTask()
+            {
+                TaskType = taskType,
+                TaskNoFromMes = mesTaskNo,
+                Barcode = "AD-MZY00-" + mazNum,
+                FromStation = from,
+                LoaderToAmrhighOrLow = fromHigh,
+                ToStation = to,
+                AmrtoLoaderHighOrLow = toHigh,
+                Priority = 0,
+                DelaySecond = 0,
+                //GetFromMesTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
+            };
+        (bool, string) res = await dataBufferService.GetNewMESTask(newTask);
+        newSending = false;
+        addTaskDialogueVisible = false;
+        if (res.Item1)
+        {
+            uiService.ShowPopup(PPopupType.Success, res.Item2);
+        }
+        else
+        {
+            uiService.ShowPopup(PPopupType.Dangerous, res.Item2);
+        }
+    }
 
-	private void GetTaskStatusCss(GridCustomizeElementEventArgs e)
-	{
-		if (e.ElementType == GridElementType.DataRow)
-		{
-			if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 0)
-			{
-				e.CssClass = "Queueing";
-			}
-			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 1)
-			{
-				e.CssClass = "Running";
-			}
-			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 2)
-			{
-				e.CssClass = "Finished";
-			}
-			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 3)
-			{
-				e.CssClass = "Error";
-			}
-			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 4)
-			{
-				e.CssClass = "Pause";
-			}
-			else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 5)
-			{
-				e.CssClass = "Canael";
-			}
-		}
-	}
+    private async Task ManuallyRevise()
+    {
+        newSending = true;
+        ReviseTask newReviseTask = new ReviseTask()
+            {
+                OriginalMesTaskNo = originalMesTaskNo,
+                NewTaskMesNo = newReviseTaskMesNo,
+                Barcode = barcode_rev,
+                ToStation = to_rev,
+                AmrtoLoaderHighOrLow = toHigh_rev,
+                //GetFromMesTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
+            };
+        (bool, string) res = await dataBufferService.GetReviseTask(newReviseTask);
+        newSending = false;
+        reviseDialogueShow = false;
+        if (res.Item1)
+        {
+            uiService.ShowPopup(PPopupType.Success, res.Item2);
+            mesTasks.Remove(selectedTask);
+        }
+        else
+        {
+            uiService.ShowPopup(PPopupType.Dangerous, res.Item2);
+        }
+    }
 
+    private void GetFlowDetail(FlowTaskStatus targetFlow)
+    {
+        if (selectedTask != null)
+        {
+            if (selectedTask.TaskNoFromSwarmCore == targetFlow.flowid)
+            {
+                InvokeAsync(() =>
+               {
+                   flowDetail = targetFlow;
+                   (bool, string) a = dataBufferService.GetMZYByMesNo(selectedTask.TaskNoFromMes);
+                   withMZY = a.Item1;
+                   barcode = a.Item2;
+                   StateHasChanged();
+               });
+
+            }
+        }
+    }
+
+    //ui
+    private void InitNewTaskParameter()
+    {
+        taskType = 0;
+        mesTaskNo = "selftest";
+        mazNum = "000";
+        fromList = configService.GetPlcConfigs().Where(x => !x.Name.Contains("STCL")).Select(x => x.Name).ToList();
+        fromList.AddRange(new List<string> { "STCU01", "STCU03", "STCU05" });
+        from = fromList.FirstOrDefault();
+        CheckFromPos(from);
+        toList = configService.GetPlcConfigs().Where(x => !x.Name.Contains("STCU")).Select(x => x.Name).ToList();
+        toList.AddRange(new List<string> { "STCL01", "STCL03", "STCL05" });
+        to = toList.FirstOrDefault();
+        CheckToPos(to);
+        fromEnable = true;
+        toEnable = true;
+    }
+    private void InitNewReviseTaskParameter()
+    {
+        originalMesTaskNo = selectedTask.TaskNoFromMes;
+        newReviseTaskMesNo = originalMesTaskNo + "_re";
+        to_rev = revTo.FirstOrDefault();
+        toHigh_rev = false;
+        (bool, string) tmp = dataBufferService.GetMZYByMesNo(originalMesTaskNo);
+        barcode_rev = tmp.Item1 ? tmp.Item2 : "";
+    }
+
+    private void CheckFromPos(string from)
+    {
+        this.from = from;
+        if (topin_butout.Contains(from))
+        {
+            fromHigh = false;
+            fromPosEnable = false;
+        }
+        else if (topout_butin.Contains(from))
+        {
+            fromHigh = true;
+            fromPosEnable = false;
+        }
+        else
+        {
+            fromHigh = false;
+            fromPosEnable = true;
+        }
+    }
+
+    private void CheckToPos(string to)
+    {
+        this.to = to;
+        if (topin_butout.Contains(to))
+        {
+            toHigh = true;
+            toPosEnable = false;
+        }
+        else if (topout_butin.Contains(to))
+        {
+            toHigh = false;
+            toPosEnable = false;
+        }
+        else
+        {
+            toHigh = false;
+            toPosEnable = true;
+        }
+    }
+
+    private void CheckFromToEnable(int taskType)
+    {
+        if (taskType == 0)
+        {
+            fromEnable = true;
+            from = fromList.FirstOrDefault();
+            toEnable = true;
+            to = toList.FirstOrDefault();
+        }
+        else if (taskType == 1)
+        {
+            fromHigh = false;
+            fromEnable = false;
+            toEnable = true;
+            from = "STCP03";
+            to = toList.FirstOrDefault();
+            CheckToPos(to);
+        }
+        else if (taskType == 2)
+        {
+            fromEnable = true;
+            toEnable = false;
+            toEnable = false;
+            from = fromList.FirstOrDefault();
+            to = "STCP03";
+            CheckFromPos(from);
+        }
+    }
+
+    private void GetStastic()
+    {
+        InvokeAsync(() =>
+                {
+                    if (mesTasks.Count > 0)
+                    {
+                        total = mesTasks.Count();
+                        queueCount = mesTasks.Count(x => x.Status == 0);
+                        runningCount = mesTasks.Count(x => x.Status == 1);
+                        failCount = mesTasks.Count(x => x.Status == 3);
+                        pauseCount = mesTasks.Count(x => x.Status == 4);
+                    }
+                    else
+                    {
+                        total = 0;
+                        queueCount = 0;
+                        runningCount = 0;
+                        failCount = 0;
+                        pauseCount = 0;
+                    }
+                    RefreshTitleColorStr();
+                    StateHasChanged();
+                });
+    }
+
+    private void RefreshTitleColorStr()
+    {
+        if (failCount > 0)
+        {
+            titleBackground = "rgb(255, 204, 204)";
+        }
+        else
+        {
+            if (runningCount > 0)
+            {
+                titleBackground = "rgb(204, 229, 255)";
+            }
+            else
+            {
+                if (queueCount > 0)
+                {
+                    titleBackground = "rgb(217, 217, 217)";
+                }
+                else
+                {
+                    titleBackground = "rgb(255, 255, 255)";
+                }
+            }
+        }
+    }
+
+    private void SetUnboundColumn(GridCustomizeCellDisplayTextEventArgs e)
+    {
+        //Console.WriteLine(e.FieldName);
+        if (e.FieldName == "LoaderToAmrhighOrLow")
+        {
+            bool tmp = Convert.ToBoolean(e.GetRowValue("LoaderToAmrhighOrLow"));
+            e.DisplayText = tmp ? "Top" : "Bottom";
+        }
+        else if (e.FieldName == "AmrtoLoaderHighOrLow")
+        {
+            bool tmp = Convert.ToBoolean(e.GetRowValue("AmrtoLoaderHighOrLow"));
+            e.DisplayText = tmp ? "Top" : "Bottom";
+        }
+        else if (e.FieldName == "Status")
+        {
+            int tmp = Convert.ToInt32(e.GetRowValue("Status"));
+            if (tmp == 0)
+            {
+                e.DisplayText = "Queueing";
+            }
+            else if (tmp == 1)
+            {
+                e.DisplayText = "Running";
+            }
+            else if (tmp == 2)
+            {
+                e.DisplayText = "Finished";
+            }
+            else if (tmp == 3)
+            {
+                e.DisplayText = "Error";
+            }
+            else if (tmp == 4)
+            {
+                e.DisplayText = "Pause";
+            }
+            else if (tmp == 5)
+            {
+                e.DisplayText = "Cancel";
+            }
+        }
+    }
+
+    private void GetTaskStatusCss(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow)
+        {
+            if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 0)
+            {
+                e.CssClass = "Queueing";
+            }
+            else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 1)
+            {
+                e.CssClass = "Running";
+            }
+            else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 2)
+            {
+                e.CssClass = "Finished";
+            }
+            else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 3)
+            {
+                e.CssClass = "Error";
+            }
+            else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 4)
+            {
+                e.CssClass = "Pause";
+            }
+            else if (Convert.ToInt16(e.Grid.GetRowValue(e.VisibleIndex, "Status")) == 5)
+            {
+                e.CssClass = "Canael";
+            }
+        }
+    }
+
+    private string AmridToNo(string id)
+    {
+        AMRStatus amr = dataBufferService.GetAMRstatusList().FirstOrDefault(x=>x.robot_id == id);
+        return amr == null ? "?" : amr.robot_name;
+    }
+    //private void SetMZYNo(string s)
+    //{
+    //    string ori = mazNum;
+    //    s = s.Trim();
+    //    if (s.Length != 3)
+    //    {
+    //        mazNum = ori;
+    //    }
+    //    else
+    //    {
+    //        int n;
+    //        bool isNumeric = int.TryParse(s, out n);
+    //        if (isNumeric)
+    //        {
+    //            mazNum = s;
+    //        }
+    //    }
+    //    StateHasChanged();
+    //}
 
 }

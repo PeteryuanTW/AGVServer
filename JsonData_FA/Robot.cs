@@ -18,6 +18,7 @@ namespace AGVServer.Data
 		public string role { get; set; }
 		public string fleet_name { get; set; }
 		public Capability capability { get; set; }
-		public double last_update_time { get; set; }
+        public int connection_status { get; set; }
+        public double last_update_time { get; set; }
 	}
 }

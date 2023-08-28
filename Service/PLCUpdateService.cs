@@ -29,14 +29,13 @@ namespace AGVServer.Service
 			plcUpdateTick = _configService.GetPLCUpdateSecond();
 			await _dataBufferService.InitPLCClass();
 			master = factory.CreateMaster(tcpClient);
-			int i = 1;
 			while (!stoppingToken.IsCancellationRequested)
 			{
 				if (_dataBufferService.GetPLCUpdateFlag())
 				{
 					try
 					{
-						if (_dataBufferService.GetPLCClasses().Any())
+						if (_dataBufferService.GetPLCClasses().Count()>0)
 						{
 							await _dataBufferService.UpdatePLCStatus(master);
 						}
@@ -46,10 +45,11 @@ namespace AGVServer.Service
 						Console.WriteLine(e);
 					}
 					await Task.Delay(plcUpdateTick * 1000);
-					i++;
 				}
 			}
 			tcpClient.Close();
-		}
+			_dataBufferService.ResetPLCClass();
+
+        }
 	}
 }

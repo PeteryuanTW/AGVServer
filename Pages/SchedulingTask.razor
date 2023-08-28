@@ -1,15 +1,17 @@
 ﻿@page "/SchedulingTask"
 @inject DataBufferService dataBufferService
+@inject UIService uiService
 
 
 <DxGridLayout>
 	<Rows>
 		<DxGridLayoutRow Height="10%" />
-		<DxGridLayoutRow Height="90%" />
+		<DxGridLayoutRow Height="80%" />
+		<DxGridLayoutRow Height="10%" />
 	</Rows>
 	<Columns>
-		<DxGridLayoutColumn Width="50%" />
-		<DxGridLayoutColumn Width="50%" />
+		<DxGridLayoutColumn Width="40%" />
+		<DxGridLayoutColumn Width="60%" />
 	</Columns>
 	<Items>
 		<DxGridLayoutItem Row="0" Column="0">
@@ -19,7 +21,7 @@
 						<Items>
 							@if (schedulingTasks.Count() == 0)
 							{
-								<DxToolbarItem Text="Get Data" RenderStyle="ButtonRenderStyle.Secondary" BeginGroup="true" Enabled="true" Click="(()=>{dataBufferService.RefreshSchedulingTasks(bot, top);})" />
+								<DxToolbarItem Text="Get Data" RenderStyle="ButtonRenderStyle.Secondary" BeginGroup="true" Enabled="true" Click="(()=>{dataBufferService.RefreshSchedulingTasks(bot, top, skipSec_query);})" />
 							}
 							else
 							{
@@ -42,23 +44,45 @@
 		<DxGridLayoutItem Row="0" Column="1">
 			<Template>
 				<DxFormLayout>
-					<DxFormLayoutItem Caption="BOT">
+					<DxFormLayoutItem Caption="BOT" ColSpanLg="4">
 						<DxCheckBox @bind-Checked="bot" CheckType="CheckType.Switch" Enabled="@(schedulingTasks.Count() == 0)"></DxCheckBox>
 					</DxFormLayoutItem>
-					<DxFormLayoutItem Caption="TOP">
+					<DxFormLayoutItem Caption="TOP" ColSpanLg="4">
 						<DxCheckBox @bind-Checked="top" CheckType="CheckType.Switch" Enabled ="@(schedulingTasks.Count() == 0)"></DxCheckBox>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem Caption="Query Skip Second" ColSpanLg="4">
+						<DxSpinEdit @bind-Value="skipSec_query" Enabled="@(schedulingTasks.Count() == 0)"></DxSpinEdit>
 					</DxFormLayoutItem>
 				</DxFormLayout>
 			</Template>
 		</DxGridLayoutItem>
 		<DxGridLayoutItem Row="1" Column="0" ColumnSpan="2">
 			<Template>
-				<DxGrid Data="@schedulingTasks">
+				<DxGrid Data="@schedulingTasks" UnboundColumnData="Grid_CustomUnboundColumnData">
 					<Columns>
 						<DxGridDataColumn FieldName="TaskNoFromMes"></DxGridDataColumn>
+						<DxGridDataColumn FieldName="FromStation"></DxGridDataColumn>
+						<DxGridDataColumn FieldName="ToStation"></DxGridDataColumn>
+						<DxGridDataColumn FieldName="FromPos" Caption="FromPos" UnboundType="GridUnboundColumnType.String"></DxGridDataColumn>
+						<DxGridDataColumn FieldName="ToPos" Caption="ToPos" UnboundType="GridUnboundColumnType.String"></DxGridDataColumn>
 						<DxGridDataColumn FieldName="DelaySecond" DisplayFormat="g"></DxGridDataColumn>
 					</Columns>
 				</DxGrid>
+			</Template>
+		</DxGridLayoutItem>
+		<DxGridLayoutItem Row="2" Column="0" ColumnSpan="2">
+			<Template>
+				<DxFormLayout>
+					@if (!processing && schedulingTasks.Count > 0)
+					{
+						<DxFormLayoutItem Caption="Skip Currtent Task Second" ColSpanLg="2">
+							<DxSpinEdit @bind-Value="skipSec_runtime"></DxSpinEdit>
+						</DxFormLayoutItem>
+						<DxFormLayoutItem ColSpanLg="2">
+							<DxButton Text="Skip" Click="(async()=>{await Skip();})"></DxButton>
+						</DxFormLayoutItem>
+					}
+				</DxFormLayout>
 			</Template>
 		</DxGridLayoutItem>
 	</Items>
@@ -71,9 +95,12 @@
 	private bool bot = false;
 	private bool top = false;
 
+	private ushort skipSec_query = 0;//
+	private ushort skipSec_runtime = 0;
+
 	protected override Task OnInitializedAsync()
 	{
-		schedulingTasks = dataBufferService.GetSchedulingTashs();
+		schedulingTasks = dataBufferService.GetSchedulingTasks().OrderBy(x => x.DelaySecond).ToList();
 		processing = dataBufferService.GetSchedulingStatus();
 		dataBufferService.ScheduleTasksChangeAct += UpdateSchedulingTasks;
 		dataBufferService.SchedulingChangeAct += UpdateSchedulingStatus;
@@ -84,7 +111,7 @@
 	{
 		InvokeAsync(() =>
 		{
-			schedulingTasks = newStatus;
+			schedulingTasks = newStatus.OrderBy(x=>x.DelaySecond).ToList();
 			StateHasChanged();
 		});
 
@@ -96,6 +123,35 @@
 			processing = status;
 			StateHasChanged();
 		});
+	}
+
+	private async Task Skip()
+	{
+		uiService.ShowPanel("porcossing...");
+		var res = await dataBufferService.SkipSchedulingSec(skipSec_runtime);
+		uiService.ClosePanel();
+		if (res.Item1)
+		{
+			uiService.ShowPopup(PPopupType.Success, res.Item2);
+		}
+		else
+		{
+			uiService.ShowPopup(PPopupType.Dangerous, res.Item2);
+		}
+	}
+
+	private void Grid_CustomUnboundColumnData(GridUnboundColumnDataEventArgs e)
+	{
+		if (e.FieldName == "FromPos")
+		{
+			bool tmp = Convert.ToBoolean(e.GetRowValue("LoaderToAmrhighOrLow"));
+			e.Value = tmp ? "Top" : "Down";
+		}
+		else if (e.FieldName == "ToPos")
+		{
+			bool tmp = Convert.ToBoolean(e.GetRowValue("AmrtoLoaderHighOrLow"));
+			e.Value = tmp ? "Top" : "Down";
+		}
 	}
 
 }

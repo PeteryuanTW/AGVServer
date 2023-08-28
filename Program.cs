@@ -10,9 +10,12 @@ using System.Net.Sockets;
 using System.Net;
 using Microsoft.OpenApi.Models;
 using AGVServer.EFModels;
+using Microsoft.EntityFrameworkCore;
 //using DevExpress.XtraPrinting.Shape.Native;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -20,25 +23,25 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddHttpClient();
 builder.Services.AddDevExpressBlazor(options =>
 {
-	options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
-	options.SizeMode = DevExpress.Blazor.SizeMode.Large;
+    options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
+    options.SizeMode = DevExpress.Blazor.SizeMode.Large;
 });
 
 //info to console log, warning to write log file
 Log.Logger = new LoggerConfiguration()
-	 .WriteTo.File("Logs/log.txt",
-	 rollingInterval: RollingInterval.Day,
-	 rollOnFileSizeLimit: true,
-	 shared: true,
-	 restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information
-	 )
-	 .WriteTo.Console()
-	.CreateLogger();
+     .WriteTo.File("Logs/log.txt",
+     rollingInterval: RollingInterval.Day,
+     rollOnFileSizeLimit: true,
+     shared: true,
+     restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information
+     )
+     .WriteTo.Console()
+    .CreateLogger();
 
 builder.Services.AddResponseCompression(opts =>
 {
-	opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-		new[] { "application/octet-stream" });
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/octet-stream" });
 });
 
 #region api & swagger
@@ -46,7 +49,7 @@ builder.Services.AddControllers();
 builder.Services.AddControllersWithViews();
 builder.Services.AddSwaggerGen(options =>
 {
-	options.SwaggerDoc("v0", new OpenApiInfo { Title = "TM", Version = "v0" });
+    options.SwaggerDoc("v0", new OpenApiInfo { Title = "TM", Version = "v0" });
 });
 
 #endregion
@@ -55,8 +58,14 @@ builder.Services.AddSwaggerGen(options =>
 builder.WebHost.UseWebRoot("wwwroot");
 builder.WebHost.UseStaticWebAssets();
 
-builder.Services.AddDbContextFactory<AGVDBContext>();
-
+builder.Services.AddDbContextFactory<AGVDBContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+//builder.Services.AddDbContext<AGVDBContext>(options =>
+//{
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+//});
 //builder.Services.AddSignalR();
 //builder.Services.AddSingleton<HubLog>();
 #region Service
@@ -91,9 +100,9 @@ app.UseResponseCompression();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-	app.UseExceptionHandler("/Error");
-	// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-	app.UseHsts();
+    app.UseExceptionHandler("/Error");
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
 }
 //app.UseHttpsRedirection();
 
@@ -118,7 +127,7 @@ IModbusSlave slave = factory.CreateSlave(1);
 network.AddSlave(slave);
 var bgThread = new Thread(() =>
 {
-	network.ListenAsync().GetAwaiter().GetResult();
+    network.ListenAsync().GetAwaiter().GetResult();
 });
 bgThread.IsBackground = true;
 bgThread.Start();
@@ -129,7 +138,7 @@ bgThread.Start();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-	c.SwaggerEndpoint("/swagger/v0/swagger.json", "v0");
+    c.SwaggerEndpoint("/swagger/v0/swagger.json", "v0");
 });
 
 #endregion

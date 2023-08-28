@@ -17,7 +17,7 @@ namespace AGVServer.Controllers
 		}
 
 		[HttpGet]
-		[Route("[action]")]
+        [Route("[action]")]
 		public ActionResult<List<AMRStatus>> GetAllAMRStatus()
 		{
 			return Ok(dataBufferService.GetAMRstatusList());

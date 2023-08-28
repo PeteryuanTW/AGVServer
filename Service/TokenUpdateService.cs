@@ -6,7 +6,7 @@ namespace AGVServer.Service
 	{
 		private readonly DataBufferService _dataBufferService;
 		private readonly ConfigService _configService;
-		private int refreshTokenDay;
+		private int refreshTokenHour;
 
 		public TokenUpdateService(DataBufferService dataBufferService, ConfigService configService)
 		{
@@ -16,7 +16,7 @@ namespace AGVServer.Service
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
-			refreshTokenDay = _configService.GetTokenUpdateDay();
+			refreshTokenHour = _configService.GetTokenUpdateDay();
 			while (!stoppingToken.IsCancellationRequested)
 			{
 				try
@@ -30,7 +30,7 @@ namespace AGVServer.Service
 					Console.WriteLine("update swarm core token fail");
 				}
 				
-				await Task.Delay(refreshTokenDay*86400*1000);
+				await Task.Delay(refreshTokenHour * 60*60*1000);
 			}
 		}
 		public override async Task StopAsync(CancellationToken cancellationToken)

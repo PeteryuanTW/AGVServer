@@ -1,277 +1,438 @@
 ﻿@page "/PLCDashboard"
 @inject DataBufferService dataBufferService
 @inject UIService uiService
+@inject PLCUpdateService plcUpdateService
 @implements IDisposable
 
 <style>
-	.modBusToPLC > td {
-		background-color: rgba(255, 176, 102, 0.3);
-	}
+    .modBusToPLC > td {
+        background-color: rgba(255, 176, 102, 0.3);
+    }
 
-	.PLCToModbus > td {
-		background-color: rgba(209, 227, 255, 0.5);
-	}
+    .PLCToModbus > td {
+        background-color: rgba(209, 227, 255, 0.5);
+    }
 
 
-	.Connect div {
-		background-color: rgb(204, 255, 204);
-	}
+    .Connect div {
+        background-color: rgb(204, 255, 204);
+    }
 
-	.Disconnect div {
-		background-color: rgb(255, 245, 245);
-	}
+    .Disconnect div {
+        background-color: rgb(255, 245, 245);
+    }
 
-	.Initilizing div {
-		background-color: rgb(230, 230, 230);
-	}
+    .Initilizing div {
+        background-color: rgb(230, 230, 230);
+    }
 </style>
-<div style="margin:10px;">
-	<DxFormLayout CssClass="@GetPLCStatusCss()">
-		<DxFormLayoutItem Caption="PLC" ColSpanMd=4>
-			<DxComboBox Data="@plcConfigs" Value="@currentPLCConfig"
-						EditFormat="{0}"
-						ValueChanged="(Plcconfig config)=>{PLCSelect(config);}">
-				<Columns>
-					<DxListEditorColumn FieldName="Ip"></DxListEditorColumn>
-					<DxListEditorColumn FieldName="Name"></DxListEditorColumn>
-				</Columns>
-			</DxComboBox>
-		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="Name" ColSpanMd=4>
-			<DxTextBox @bind-Text="@currentPLCConfig.Name" Enabled=false></DxTextBox>
-		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="Port" ColSpanMd=4>
-			<DxSpinEdit @bind-Value="@currentPLCConfig.Port" Enabled=false></DxSpinEdit>
-		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="Type" ColSpanMd=4>
-			<DxTextBox @bind-Text="@currentPLCConfig.Plctype" Enabled=false></DxTextBox>
-		</DxFormLayoutItem>
-		<DxFormLayoutItem Caption="Enable" ColSpanMd=4 BeginRow="true">
-			<DxCheckBox @bind-Checked="@currentPLCConfig.Enabled" CheckType="CheckType.Switch" Enabled=false></DxCheckBox>
-		</DxFormLayoutItem>
-		@if (currentPLC != null)
-		{
-			@if (currentPLC.tcpConnect)
-			{
-				<DxFormLayoutItem Caption="Connect Time" ColSpanMd=4 >
-					<DxTimeEdit @bind-Time="@currentPLC.lastestConnectTime" Enabled=false></DxTimeEdit>
-				</DxFormLayoutItem>
-				<DxFormLayoutItem Caption="Category" ColSpanMd=4 BeginRow="true">
-					<DxComboBox Data="@categoryList" Value="@currentCategory" ValueChanged="(string newCategory)=>{SelectNewCategory(newCategory);}"></DxComboBox>
-				</DxFormLayoutItem>
-			}
-		}
-	</DxFormLayout>
-</div>
-@if (currentPLC != null)
-{
-	<div style="margin-top:10px">
-		@if (currentPLC.tcpConnect)
-		{
-			@if (currentPLC.keepUpdate)
-			{
-				<DxGrid Data="@targetPoints" UnboundColumnData="@SetUpdateDirectionColumn" CustomizeElement="UpdateType">
-					<Columns>
-						<DxGridDataColumn FieldName="modbusIndex" />
-						<DxGridDataColumn FieldName="modbusValue">
-							<CellDisplayTemplate>
-								<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
-							</CellDisplayTemplate>
-						</DxGridDataColumn>
-						<DxGridDataColumn FieldName="mxIndex" />
-						<DxGridDataColumn FieldName="updateValueSuccess">
-							<CellDisplayTemplate>
-								<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
-							</CellDisplayTemplate>
-						</DxGridDataColumn>
-						<DxGridDataColumn FieldName="mxValue">
-							<CellDisplayTemplate>
-								<DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
-							</CellDisplayTemplate>
-						</DxGridDataColumn>
-						<DxGridDataColumn FieldName="mxSuccessRead">
-							<CellDisplayTemplate>
-								<DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
-							</CellDisplayTemplate>
-						</DxGridDataColumn>
-						<DxGridDataColumn FieldName="remark" />
-						<DxGridDataColumn FieldName="lastUpdateTime" DisplayFormat="yyyy/MM/dd HH:mm:ss fff" />
-					</Columns>
-				</DxGrid>
-				<div style="margin:10px">
-					<DxButton Text="Reset" Click="(async ()=>{await dataBufferService.ResetModbusValue(currentPLC);})" RenderStyle="ButtonRenderStyle.Danger"></DxButton>
-				</div>
-			}
+<DxGridLayout>
+    <Rows>
+        <DxGridLayoutRow Height="auto" />
+        <DxGridLayoutRow Height="auto" />
+        <DxGridLayoutRow Height="auto" />
+        <DxGridLayoutRow Height="auto" />
+    </Rows>
+    <Columns>
+        <DxGridLayoutColumn Width="50%" />
+        <DxGridLayoutColumn Width="50%" />
+    </Columns>
+    <Items>
+        <DxGridLayoutItem Row="0" Column="0" ColumnSpan="2">
+            <Template>
+                <div class="rounded-pill" style="background-color:rgb(250,250,250); margin:10px">
+                    <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" Title="PLC Status">
+                        <Items>
+                            <DxToolbarItem Text="Enable" RenderStyle="ButtonRenderStyle.Primary" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@enableCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Run Time" RenderStyle="ButtonRenderStyle.Secondary" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@runtimeCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Connect" RenderStyle="ButtonRenderStyle.Success" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@connectCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Try Connecting" RenderStyle="ButtonRenderStyle.Warning" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@tryingConnectCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Disconnect" RenderStyle="ButtonRenderStyle.Danger" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@disconnectCount</span>
+                            </DxToolbarItem>
+                            <DxToolbarItem Text="Not Sync" RenderStyle="ButtonRenderStyle.Danger" BeginGroup="true" Enabled="false">
+                                @context.Text
+                                <span class="rounded" style="margin-left:10px; vertical-align:central">@notSyncCount</span>
+                            </DxToolbarItem>
 
-		}
-		else
-		{
-			<div style="width:20%">
-				<DxGrid Data="@currentPLC.retryFailRecord">
-					<Columns>
-						<DxGridDataColumn Caption="Log Time" FieldName="Value" DisplayFormat="yyyy/MM/dd HH:mm:ss fff" />
-					</Columns>
-				</DxGrid>
-			</div>
-			<div style="margin:20px">
-				<DxButton Text="Retry Connect" Click="(async()=>{await currentPLC.TryConnectTcp();})"></DxButton>
-			</div>
-		}
-	</div>
-}
+                        </Items>
+                    </DxToolbar>
+                </div>
+            </Template>
+        </DxGridLayoutItem>
+        <DxGridLayoutItem Row="1" Column="0" ColumnSpan="2">
+            <Template>
+                <div style="margin:10px;">
+                    <DxFormLayout CssClass="@GetPLCStatusCss()">
+                        <DxFormLayoutItem Caption="PLC" ColSpanMd=4>
+                            <DxComboBox Data="@plcConfigs" Value="@currentPLCConfig"
+                                        EditFormat="{0}"
+                                        ValueChanged="(Plcconfig config)=>{PLCSelect(config);}">
+                                <Columns>
+                                    <DxListEditorColumn FieldName="Ip"></DxListEditorColumn>
+                                    <DxListEditorColumn FieldName="Name"></DxListEditorColumn>
+                                </Columns>
+                            </DxComboBox>
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Name" ColSpanMd=4>
+                            <DxTextBox @bind-Text="@currentPLCConfig.Name" Enabled=false></DxTextBox>
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Port" ColSpanMd=4>
+                            <DxSpinEdit @bind-Value="@currentPLCConfig.Port" Enabled=false></DxSpinEdit>
+                        </DxFormLayoutItem>
+                        @*<DxFormLayoutItem Caption="Type" ColSpanMd=4>
+                        <DxTextBox @bind-Text="@currentPLCConfig.Plctype" Enabled=false></DxTextBox>
+                        </DxFormLayoutItem>*@
+                        <DxFormLayoutItem Caption="Enable" ColSpanMd=4 BeginRow="true">
+                            <DxCheckBox @bind-Checked="@currentPLCConfig.Enabled" CheckType="CheckType.Switch" Enabled=false></DxCheckBox>
+                        </DxFormLayoutItem>
+                        @if (currentPLC != null)
+                        {
+                            @if (currentPLC.tcpConnect)
+                            {
+                                <DxFormLayoutItem Caption="Keep Updating" ColSpanMd=4 >
+                                    <DxCheckBox @bind-Checked="@currentPLC.keepUpdate" Enabled="@(!currentPLC.selfCheckFlag)" CheckType="CheckType.Switch"></DxCheckBox>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Check Sync" ColSpanMd=4>
+                                    <DxCheckBox @bind-Checked="@currentPLC.selfCheckFlag" CheckType="CheckType.Switch"></DxCheckBox>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Connect Time" ColSpanMd=4 BeginRow="true">
+                                    <DxTimeEdit @bind-Time="@currentPLC.lastestConnectTime" Enabled=false></DxTimeEdit>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Category" ColSpanMd=4>
+                                    <DxComboBox Data="@categoryList" Value="@currentCategory" ValueChanged="(string newCategory)=>{SelectNewCategory(newCategory);}"></DxComboBox>
+                                </DxFormLayoutItem>
+                            }
+                        }
+                    </DxFormLayout>
+                </div>
+            </Template>
+        </DxGridLayoutItem>
+        <DxGridLayoutItem Row="2" Column="0" ColumnSpan="2">
+            <Template>
+                <div style="margin:10px;"></div>
+                @if (currentPLC != null)
+                {
+                    @if (currentPLC.tcpConnect)
+                    {
+                        @if (currentPLC.keepUpdate)
+                        {
+                            <DxGrid Data="@targetPoints" UnboundColumnData="@SetUpdateDirectionColumn" CustomizeElement="UpdateType">
+                                <Columns>
+                                    <DxGridDataColumn FieldName="modbusIndex" />
+                                    <DxGridDataColumn FieldName="modbusValue">
+                                        <CellDisplayTemplate>
+                                            <DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                    <DxGridDataColumn FieldName="mxIndex" />
+                                    <DxGridDataColumn FieldName="updateValueSuccess">
+                                        <CellDisplayTemplate>
+                                            <DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                    <DxGridDataColumn FieldName="mxValue">
+                                        <CellDisplayTemplate>
+                                            <DxCheckBox Checked="@((bool)context.Value)" Enabled="false" CheckType="CheckType.Switch"></DxCheckBox>
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                    <DxGridDataColumn FieldName="mxSuccessRead">
+                                        <CellDisplayTemplate>
+                                            <DxCheckBox Checked="@((bool)context.Value)" Enabled="false"></DxCheckBox>
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                    <DxGridDataColumn FieldName="remark" />
+                                    <DxGridDataColumn FieldName="lastUpdateTime" DisplayFormat="yyyy/MM/dd HH:mm:ss fff" />
+                                </Columns>
+                            </DxGrid>
+                        }
+
+                    }
+                    else
+                    {
+                        <div style="width:20%">
+                            @if (currentPLC.retryFailRecord.Count > 0 && currentPLC.retryFailRecord != null)
+                            {
+                                <DxGrid Data="@currentPLC.retryFailRecord">
+                                    <Columns>
+                                        <DxGridDataColumn Caption="Log Time" FieldName="Value" DisplayFormat="yyyy/MM/dd HH:mm:ss fff" />
+                                    </Columns>
+                                </DxGrid>
+                            }
+                        </div>
+                    }
+                }
+            </Template>
+        </DxGridLayoutItem>
+        <DxGridLayoutItem Row="3" Column="0" ColumnSpan="2">
+            <Template>
+                <div style="margin:10px;">
+                    <DxFormLayout>
+                        <DxFormLayoutGroup Caption="Operation">
+                            @if (currentPLC != null)
+                            {
+                                @if (currentPLC.tcpConnect)
+                                {
+                                    @if (currentPLC.keepUpdate)
+                                    {
+                                        <DxFormLayoutItem>
+                                            <DxButton Text="Reset" Click="(async ()=>{await dataBufferService.ResetModbusValue(currentPLC);})" RenderStyle="ButtonRenderStyle.Danger"></DxButton>
+                                        </DxFormLayoutItem>
+                                    }
+                                }
+                                else
+                                {
+                                    @if (!currentPLC.keepUpdate)
+                                    {
+                                        <DxFormLayoutItem>
+                                            <DxButton Text="Refresh Connection" Click="(async ()=>{await RefreshPLC();})" RenderStyle="ButtonRenderStyle.Success"></DxButton>
+                                        </DxFormLayoutItem>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <DxFormLayoutItem>
+                                    <DxButton Text="Retry init PLC" Click="(async ()=>{await ReInitPLC();})"></DxButton>
+                                </DxFormLayoutItem>
+
+                            }
+                        </DxFormLayoutGroup>
+                    </DxFormLayout>
+                </div>
+            </Template>
+        </DxGridLayoutItem>
+    </Items>
+</DxGridLayout>
+
+
 
 
 
 @code {
 
-	private DxGrid PLCGrid;
+    private DxGrid PLCGrid;
 
-	private IEnumerable<Plcconfig> plcConfigs;
-	//private IEnumerable<string> ipList;
+    private IEnumerable<Plcconfig> plcConfigs;
+    private IEnumerable<PLCClass> plcClasses;
+    private int enableCount;
+    private int runtimeCount;
+    private int connectCount;
+    private int tryingConnectCount;
+    private int disconnectCount;
+    private int notSyncCount;
 
-	private PLCClass currentPLC;
+    private PLCClass currentPLC;
 
-	private IEnumerable<PLCValueTable> targetPoints;
+    private IEnumerable<PLCValueTable> targetPoints;
 
-	private IEnumerable<string> categoryList;
-	private string currentCategory;
-
-
-	private Plcconfig currentPLCConfig;
-	private bool keepUpdatingFlag;
-
-
-
-	protected override async Task OnInitializedAsync()
-	{
-		uiService.ShowPanel("Loading...");
-		plcConfigs = dataBufferService.GetPLCConfigs();
-		//ipList = plcClasses.Select(x => x.ip);
-		currentPLCConfig = plcConfigs.First();
-		categoryList = dataBufferService.GetPLCIndexTable(currentPLCConfig.Plctype).Select(x => x.Category).Distinct();
-		currentCategory = categoryList.First();
-
-		if (dataBufferService.GetPLCClasses().Any(x => x.ip == currentPLCConfig.Ip))
-		{
-			currentPLC = dataBufferService.GetPLCClasses().First(x => x.ip == currentPLCConfig.Ip);
-
-			//categoryList = currentPLC.valueTables.Select(x => x.category).Distinct();
-			//currentCategory = categoryList.First();
-
-			targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
-		}
-		dataBufferService.SinglePLCClassChangeAct += PLCDataChange;
-		//return base.OnInitializedAsync();
-	}
-
-	protected override Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (firstRender)
-		{
-			uiService.ClosePanel();
-		}
-		return base.OnAfterRenderAsync(firstRender);
-	}
-
-	public void Dispose()
-	{
-		dataBufferService.SinglePLCClassChangeAct -= PLCDataChange;
-	}
-
-	private void PLCSelect(Plcconfig plcConfig)
-	{
-		currentPLCConfig = plcConfig;
-		currentPLC = dataBufferService.GetPLCClasses().FirstOrDefault(x => x.ip == currentPLCConfig.Ip);
-		if (currentPLC != null)
-		{
-			targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
-		}
-	}
-
-	private void PLCDataChange(PLCClass newPLCClasses)
-	{
-		if (newPLCClasses.ip == currentPLCConfig.Ip)
-		{
-			InvokeAsync(() =>
-			{
-				//Console.WriteLine("Get new plc data at: " + DateTime.Now.ToString("HH:mm:ss fff"));
-				currentPLC = newPLCClasses;
-				targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
-				StateHasChanged();
-				//Console.WriteLine("update plc data at: " + DateTime.Now.ToString("HH:mm:ss fff"));
-			});
-		}
-	}
-
-	private void Grid_CustomizeConnectStyle(GridCustomizeElementEventArgs e)
-	{
-		if (e.ElementType == GridElementType.DataRow)
-		{
-			if ((bool)e.Grid.GetRowValue(e.VisibleIndex, "tcpConnect"))
-			{
-				e.CssClass = "plcConnect";
-			}
-			else
-			{
-				e.CssClass = "plcDisconnect";
-			}
-
-		}
-	}
-
-	private void SelectNewCategory(string s)
-	{
-		currentCategory = s;
-		targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
-	}
-
-	private void SetUpdateDirectionColumn(GridUnboundColumnDataEventArgs e)
-	{
-		if (e.FieldName == "updateDirection")
-		{
-			bool tmp = Convert.ToBoolean(e.GetRowValue("updateType"));
-			e.Value = GetUpdateDirectionString(tmp);
-		}
-	}
-
-	private string GetUpdateDirectionString(bool updateType)
-	{
-		if (updateType)
-		{
-			return "modbus < < < plc";
-		}
-		else
-		{
-			return "modbus > > > plc";
-		}
-	}
+    private IEnumerable<string> categoryList;
+    private string currentCategory;
 
 
-	private void UpdateType(GridCustomizeElementEventArgs e)
-	{
-		if (e.ElementType == GridElementType.DataRow)
-		{
-			if ((bool)e.Grid.GetRowValue(e.VisibleIndex, "updateType"))
-			{
-				e.CssClass = "PLCToModbus";
-			}
-			else
-			{
-				e.CssClass = "modBusToPLC";
-			}
+    private Plcconfig currentPLCConfig;
+    private bool keepUpdatingFlag;
 
-		}
-	}
 
-	private string GetPLCStatusCss()
-	{
-		if (currentPLC == null)
-		{
-			return "Initilizing";
-		}
-		else
-		{
-			return currentPLC.tcpConnect ? "Connect" : "Disconnect";
-		}
-	}
+
+    protected override async Task OnInitializedAsync()
+    {
+        uiService.ShowPanel("Loading...");
+        plcConfigs = dataBufferService.GetPLCConfigs();
+        enableCount = plcConfigs.Count(x => x.Enabled);
+        GetSummary();
+
+        currentPLCConfig = plcConfigs.First();
+        categoryList = dataBufferService.GetPLCIndexTable(currentPLCConfig.Plctype).Select(x => x.Category).Distinct();
+        currentCategory = categoryList.First();
+
+        if (dataBufferService.GetPLCClasses().Any(x => x.ip == currentPLCConfig.Ip))
+        {
+            currentPLC = dataBufferService.GetPLCClasses().First(x => x.ip == currentPLCConfig.Ip);
+
+            //categoryList = currentPLC.valueTables.Select(x => x.category).Distinct();
+            //currentCategory = categoryList.First();
+
+            targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
+        }
+        dataBufferService.SinglePLCClassChangeAct += PLCDataChange;
+        dataBufferService.PLCClassesChangeAct += GetPlcNewStatus;
+        //return base.OnInitializedAsync();
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            uiService.ClosePanel();
+        }
+        return base.OnAfterRenderAsync(firstRender);
+    }
+
+    public void Dispose()
+    {
+        dataBufferService.SinglePLCClassChangeAct -= PLCDataChange;
+        dataBufferService.PLCClassesChangeAct -= GetPlcNewStatus;
+    }
+
+    private void GetSummary()
+    {
+        plcClasses = dataBufferService.GetPLCClasses();
+        runtimeCount = plcClasses.Count();
+        connectCount = plcClasses.Count(x => x.tcpConnect);
+        tryingConnectCount = plcClasses.Count(x => x.tryingConnect);
+        disconnectCount = plcClasses.Count(x => !x.tcpConnect);
+        notSyncCount = plcClasses.Count(x => !x.selfCheckFlag);
+    }
+
+    private void GetPlcNewStatus(List<PLCClass> newPlcClasses)
+    {
+        InvokeAsync(() =>
+            {
+                plcClasses = newPlcClasses;
+                //foreach (var a in plcClasses)
+                //{
+                //    Log.Information(a.ip + " " + a.tcpConnect+" "+a.tryingConnect);
+                //}
+                GetSummary();
+                //Log.Information("Connect " + connectCount);
+                //Log.Information("trying " + tryingConnectCount);
+                //Log.Information("dis " + tryingConnectCount);
+                StateHasChanged();
+            });
+    }
+
+    private void PLCSelect(Plcconfig plcConfig)
+    {
+        currentPLCConfig = plcConfig;
+        currentPLC = dataBufferService.GetPLCClasses().FirstOrDefault(x => x.ip == currentPLCConfig.Ip);
+        if (currentPLC != null)
+        {
+            targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
+        }
+    }
+
+    private void PLCDataChange(PLCClass newPLCClasses)
+    {
+        if (newPLCClasses.ip == currentPLCConfig.Ip)
+        {
+            InvokeAsync(() =>
+            {
+                //Console.WriteLine("Get new plc data at: " + DateTime.Now.ToString("HH:mm:ss fff"));
+                currentPLC = newPLCClasses;
+                targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
+                StateHasChanged();
+                //Console.WriteLine("update plc data at: " + DateTime.Now.ToString("HH:mm:ss fff"));
+            });
+        }
+    }
+
+    private async Task RefreshPLC()
+    {
+        uiService.ShowPanel("Refreshing PLC");
+        await currentPLC.ResetAndTryConnect();
+        //await plcUpdateService.StopAsync(default);
+        //await plcUpdateService.StartAsync(default);
+        uiService.ClosePanel();
+    }
+
+    private async Task ReInitPLC()
+    {
+        uiService.ShowPanel("Init plc...");
+        await dataBufferService.ManuallyAddPLC(currentPLCConfig);
+        uiService.ClosePanel();
+    }
+
+    private async Task RestartPLC(bool keepUpdatingFlag)
+    {
+        uiService.ShowPanel("Sync plc data...");
+        currentPLC.keepUpdate = keepUpdatingFlag;
+        await Task.Delay(3000);
+        uiService.ClosePanel();
+    }
+
+    private void Grid_CustomizeConnectStyle(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow)
+        {
+            if ((bool)e.Grid.GetRowValue(e.VisibleIndex, "tcpConnect"))
+            {
+                e.CssClass = "plcConnect";
+            }
+            else
+            {
+                e.CssClass = "plcDisconnect";
+            }
+
+        }
+    }
+
+    private void SelectNewCategory(string s)
+    {
+        currentCategory = s;
+        targetPoints = currentPLC.valueTables.Where(x => x.category == currentCategory).OrderBy(x => x.modbusIndex);
+    }
+
+    private void SetUpdateDirectionColumn(GridUnboundColumnDataEventArgs e)
+    {
+        if (e.FieldName == "updateDirection")
+        {
+            bool tmp = Convert.ToBoolean(e.GetRowValue("updateType"));
+            e.Value = GetUpdateDirectionString(tmp);
+        }
+    }
+
+    private string GetUpdateDirectionString(bool updateType)
+    {
+        if (updateType)
+        {
+            return "modbus < < < plc";
+        }
+        else
+        {
+            return "modbus > > > plc";
+        }
+    }
+
+
+    private void UpdateType(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow)
+        {
+            if ((bool)e.Grid.GetRowValue(e.VisibleIndex, "updateType"))
+            {
+                e.CssClass = "PLCToModbus";
+            }
+            else
+            {
+                e.CssClass = "modBusToPLC";
+            }
+
+        }
+    }
+
+    private string GetPLCStatusCss()
+    {
+        if (currentPLC == null)
+        {
+            return "Initilizing";
+        }
+        else
+        {
+            return currentPLC.tcpConnect ? "Connect" : "Disconnect";
+        }
+    }
 }

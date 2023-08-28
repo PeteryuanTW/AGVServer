@@ -26,6 +26,7 @@ namespace AGVServer.Data
 		public bool tryingConnect { get; set; }
 		public bool keepUpdate { get; set; }
 
+		public bool selfCheckFlag { get; set; }
 		public int maxRetryTimes { get; set; }
 		public int retryChance { get; set; }
 		public Dictionary<int, DateTime> retryFailRecord { get; set; }
@@ -82,7 +83,8 @@ namespace AGVServer.Data
 				//Console.WriteLine(this.name + " end at: " + DateTime.Now);
 			}
 			this.keepUpdate = plcconfig.Enabled;
-			retryChance = maxRetryTimes;
+			selfCheckFlag = true;
+            retryChance = maxRetryTimes;
 			tryingConnect = false;
 			lastestConnectTime = DateTime.Now;
 			retryFailRecord = new();
@@ -138,12 +140,22 @@ namespace AGVServer.Data
 					retryFailRecord.Add(maxRetryTimes-retryChance, DateTime.Now);
 					Log.Warning(ip+" try connecting fail, retry chance: " + retryChance);
 				}
-				tryingConnect = false;
+				finally
+				{
+					tryingConnect = false;
+				}
 			}
 			else
 			{
 			}
 		}
+
+		public async Task ResetAndTryConnect()
+		{
+			retryChance = maxRetryTimes;
+            retryFailRecord = new();
+			keepUpdate = true;
+        }
 
 		public Task TryDisconnect()
 		{
@@ -242,8 +254,12 @@ namespace AGVServer.Data
 
 			}
 			DateTime refreshEnd = DateTime.Now;
-			SelfCheck();
-		}
+			//await Task.Delay(1000);
+			if (selfCheckFlag)
+			{
+                SelfCheck();
+            }
+        }
 
 		public async Task<(bool, bool)> ReadSingleM_MC_3E(ushort index)//return (value, no error -> true)
 		{

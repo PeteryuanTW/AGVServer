@@ -35,10 +35,10 @@
 			</DxFormLayoutItem>
 		}
 		<DxFormLayoutItem ColSpanMd=12>
-			<DxGrid @ref="@grid" Data="@targetMesTasks" AllowSelectRowByClick="true" SelectedDataItemChanged="RecordSelected" Show>
+			<DxGrid @ref="@grid" Data="@targetMesTasks" AllowSelectRowByClick="true" SelectedDataItemChanged="RecordSelected">
 				<Columns>
 					<DxGridDataColumn Caption="Mes no." FieldName="TaskNoFromMes" />
-					<DxGridDataColumn Caption="Get From Mes Time" FieldName="TaskNoFromMes" />
+					<DxGridDataColumn Caption="Get From Mes Time" FieldName="GetFromMesTime" />
 					<DxGridDataColumn Caption="Start Process Time" FieldName="SwarmCoreActualStratTime" />
 					<DxGridDataColumn Caption="Finish Time" FieldName="FinishOrTimeoutTime" />
 					<DxGridDataColumn Caption="Finish Reason" FieldName="FinishReason" />
@@ -83,7 +83,7 @@
 	private async Task SearchMesTaskByNo()
 	{
 		uiService.ShowPanel("Loading...");
-		targetMesTasks = dataBufferService.GetFinishedTask();
+		targetMesTasks = dataBufferService.GetFinishedTask().Where(x => x.FinishOrTimeoutTime != "not yet");
 		if (timeSearchEnable)
 		{
 			targetMesTasks = targetMesTasks.Where(x => Convert.ToDateTime(x.FinishOrTimeoutTime) >= startTime && Convert.ToDateTime(x.FinishOrTimeoutTime) <= endTime);

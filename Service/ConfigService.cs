@@ -35,7 +35,7 @@ namespace AGVServer.Service
             baseURL = configurations.First(x => x.ConfigName == "ip").ConfigValue;
 			port = configurations.First(x => x.ConfigName == "port").ConfigValue;
 			APIUpdateSec = Convert.ToInt32(configurations.First(x => x.ConfigName == "APIUpdateSecond").ConfigValue);
-			tokenUpdateDay = Convert.ToInt32(configurations.First(x => x.ConfigName == "tokenUpdateDay").ConfigValue);
+			tokenUpdateDay = Convert.ToInt32(configurations.First(x => x.ConfigName == "tokenUpdateHour").ConfigValue);
 
 			plcconfigs = _DBcontext.Plcconfigs.ToList();
 			plcUpdateSecond = Convert.ToInt32(configurations.First(x => x.ConfigName == "PLCUpdateSecond").ConfigValue);

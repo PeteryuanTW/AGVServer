@@ -10,7 +10,9 @@ namespace AGVServer.Data
 		public string robot_id { get; set; }
 		[Required]
 		public string robot_name { get; set; }
-		[Required]
+        [Required]
+        public int connect { get; set; }
+        [Required]
 		public string model { get; set; }
 		[Required]
 		public string task_id { get; set; }
@@ -31,7 +33,8 @@ namespace AGVServer.Data
 		{
 			robot_id = robot.robot_id;
 			robot_name = robot.robot_name;
-			model = robot.model;
+			connect = robot.connection_status;
+            model = robot.model;
 			task_id = robot.task_id;
 			mode = robot.mode;
 			battery_percent = (int)Math.Round(robot.battery_percent);
