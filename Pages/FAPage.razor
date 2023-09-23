@@ -22,8 +22,10 @@
         background-color: rgba(245, 198, 203, 0.3);
     }
 </style>
-<DxGrid Data="@_AMRStatuses" UnboundColumnData="Grid_CustomUnboundColumnData" CustomizeElement="Grid_CustomizeElement">
+<DxGrid @ref="Grid" AutoExpandAllGroupRows="true" CustomizeCellDisplayText="CustomizeFleetDisplayText" Data="@_AMRStatuses" UnboundColumnData="Grid_CustomUnboundColumnData" CustomizeElement="Grid_CustomizeElement">
     <Columns>
+        <DxGridDataColumn FieldName="fleet">
+        </DxGridDataColumn>
         <DxGridDataColumn FieldName="robot_id">
             @*
             <CellDisplayTemplate>
@@ -82,12 +84,22 @@
 
 
 @code {
+    IGrid Grid { get; set; }
     private IEnumerable<AMRStatus> _AMRStatuses;
     protected override Task OnInitializedAsync()
     {
         _AMRStatuses = dataBufferService.GetAMRstatusList().OrderBy(x => x.robot_id);
         dataBufferService.AMRstatusListChangeAct += GetNewAMRStatus;
         return base.OnInitializedAsync();
+    }
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Grid.GroupBy("fleet");
+        }
+
+        return base.OnAfterRenderAsync(firstRender);
     }
     public void Dispose()
     {
@@ -100,7 +112,7 @@
         {
             InvokeAsync(() =>
             {
-                _AMRStatuses = newStatusList.OrderBy(x => x.robot_name).ToList();
+                _AMRStatuses = newStatusList.ToList();
                 StateHasChanged();
             });
 
@@ -204,6 +216,22 @@
                 default:
                     e.CssClass = "notIdelOrRunning";
                     break;
+            }
+        }
+    }
+
+    private void CustomizeFleetDisplayText(GridCustomizeCellDisplayTextEventArgs e)
+    {
+        if (e.FieldName == "fleet")
+        {
+            string fleet = e.Value.ToString();
+            if (fleet == "A1")
+            {
+                e.DisplayText = "A1 (Magzine)";
+            }
+            else if (fleet == "A2")
+            {
+                e.DisplayText = "A2 (Tray)";
             }
         }
     }

@@ -117,20 +117,37 @@ app.MapFallbackToPage("/_Host");
 #region ModbusTcp Slave thread
 int port = 502;
 IPAddress address = new IPAddress(new byte[] { 10, 10, 3, 188 });
+bool successRunModbus = false;
 // create and start the TCP slave
-TcpListener slaveTcpListener = new TcpListener(address, port);
-slaveTcpListener.Start();
-IModbusFactory factory = new ModbusFactory();
-IModbusSlaveNetwork network = factory.CreateSlaveNetwork(slaveTcpListener);
-IModbusSlave slave = factory.CreateSlave(1);
-
-network.AddSlave(slave);
-var bgThread = new Thread(() =>
+while (!successRunModbus)
 {
-    network.ListenAsync().GetAwaiter().GetResult();
-});
-bgThread.IsBackground = true;
-bgThread.Start();
+    try
+    {
+		TcpListener slaveTcpListener = new TcpListener(address, port);
+		slaveTcpListener.Start();
+		IModbusFactory factory = new ModbusFactory();
+		IModbusSlaveNetwork network = factory.CreateSlaveNetwork(slaveTcpListener);
+		IModbusSlave slave = factory.CreateSlave(1);
+
+		network.AddSlave(slave);
+		var bgThread = new Thread(() =>
+		{
+			network.ListenAsync().GetAwaiter().GetResult();
+		});
+		bgThread.IsBackground = true;
+		bgThread.Start();
+        successRunModbus = true;
+	}
+    catch(Exception e)
+    {
+		//Console.WriteLine(e);
+		TcpListener slaveTcpListener = new TcpListener(address, port);
+		slaveTcpListener.Stop();
+		successRunModbus = false;
+	}
+    await Task.Delay(3000);
+}
+
 #endregion
 
 #region swagger

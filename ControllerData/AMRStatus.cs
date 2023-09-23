@@ -5,8 +5,9 @@ namespace AGVServer.Data
 {
 	public class AMRStatus
 	{
-		
-		[Required]
+        [Required]
+        public string fleet { get; set; }
+        [Required]
 		public string robot_id { get; set; }
 		[Required]
 		public string robot_name { get; set; }
@@ -29,8 +30,9 @@ namespace AGVServer.Data
 		[Required]
 		public DateTime last_update_time { get; set; }
 
-		public AMRStatus(Robot robot)
+		public AMRStatus(Robot robot, string fleet)
 		{
+			this.fleet = fleet;
 			robot_id = robot.robot_id;
 			robot_name = robot.robot_name;
 			connect = robot.connection_status;

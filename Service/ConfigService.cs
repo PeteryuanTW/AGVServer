@@ -29,6 +29,8 @@ namespace AGVServer.Service
 
 		private int MesTaskUpdateSecond;
 
+		private IEnumerable<ManualStationConfig> manualStationList;
+
 		public void InitialVar()
 		{
 			configurations = _DBcontext.Configurations.ToList();
@@ -42,7 +44,10 @@ namespace AGVServer.Service
 			plcRetryTimes = Convert.ToInt32(configurations.First(x => x.ConfigName == "PLCRetryTimes").ConfigValue);
 
 			MesTaskUpdateSecond = Convert.ToInt32(configurations.First(x => x.ConfigName == "MesTaskUpdateSecond").ConfigValue);
-		}
+
+			manualStationList = _DBcontext.ManualStationConfigs.ToList();
+
+        }
 
 		public string GetURLAndPort()
 		{
@@ -114,5 +119,10 @@ namespace AGVServer.Service
 		{
 			return plcconfigs;
 		}
+
+        public IEnumerable<ManualStationConfig> GetManualStationConfigs()
+        {
+            return manualStationList;
+        }
     }
 }

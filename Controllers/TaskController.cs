@@ -112,6 +112,7 @@ namespace AGVServer.Controllers
             {
                 return BadRequest(info.Item2);
             }
+            //return Ok();
 
 
         }
@@ -120,22 +121,31 @@ namespace AGVServer.Controllers
         public async Task<ActionResult> AssignReviseTaskAsync([FromBody] ReviseTask reviseTask)
         {
             string str = dataBufferService.GetTaskErrorCode(reviseTask.OriginalMesTaskNo);
-            if (str != "M001" || str != "M002")
+            if (str != "M001" && str != "M002")
             {
                 return BadRequest(reviseTask.OriginalMesTaskNo + " can't not be revised");
             }
             else
             {
                 (bool, string) res = dataBufferService.GetMZYByMesNo(reviseTask.OriginalMesTaskNo);
-                if (res.Item1)
+                if (!res.Item1)
                 {
-                    return BadRequest(res.Item2);
+                    return BadRequest("no mzy at current step");
                 }
                 else
                 {
-                    return Ok(res.Item2);
-                }
+					(bool, string) r = await dataBufferService.GetReviseTask(reviseTask);
+                    if (r.Item1)
+                    {
+                        return Ok(res.Item2);
+                    }
+                    else
+                    {
+						return BadRequest(res.Item2);
+					}
+				}
             }
+            //return Ok();
         }
         #endregion
 

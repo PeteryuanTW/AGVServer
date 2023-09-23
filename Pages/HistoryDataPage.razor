@@ -38,6 +38,12 @@
 			<DxGrid @ref="@grid" Data="@targetMesTasks" AllowSelectRowByClick="true" SelectedDataItemChanged="RecordSelected">
 				<Columns>
 					<DxGridDataColumn Caption="Mes no." FieldName="TaskNoFromMes" />
+					<DxGridDataColumn Caption="Task Type" FieldName="TaskType" />
+					<DxGridDataColumn Caption="From" FieldName="FromStation" />
+					<DxGridDataColumn Caption="From High" FieldName="LoaderToAmrhighOrLow" />
+					<DxGridDataColumn Caption="To" FieldName="ToStation" />
+					<DxGridDataColumn Caption="To High" FieldName="AmrtoLoaderHighOrLow" />
+					<DxGridDataColumn Caption="Barcode" FieldName="Barcode" />
 					<DxGridDataColumn Caption="Get From Mes Time" FieldName="GetFromMesTime" />
 					<DxGridDataColumn Caption="Start Process Time" FieldName="SwarmCoreActualStratTime" />
 					<DxGridDataColumn Caption="Finish Time" FieldName="FinishOrTimeoutTime" />

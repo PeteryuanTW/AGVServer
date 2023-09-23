@@ -48,10 +48,6 @@ namespace AGVServer.EFModels
                     .HasColumnName("cellName");
 
                 entity.Property(e => e.AlignSide).HasColumnName("alignSide");
-
-                entity.Property(e => e.LeaveCell)
-                    .HasMaxLength(50)
-                    .HasColumnName("leaveCell");
             });
 
             modelBuilder.Entity<Configuration>(entity =>
@@ -131,33 +127,11 @@ namespace AGVServer.EFModels
                     .HasMaxLength(50)
                     .HasColumnName("name");
 
-                entity.Property(e => e.ArtifactId)
-                    .HasMaxLength(50)
-                    .HasColumnName("artifactID");
-
-                entity.Property(e => e.GateInCell)
-                    .HasMaxLength(50)
-                    .HasColumnName("gateInCell");
-
-                entity.Property(e => e.GateOutCell)
-                    .HasMaxLength(50)
-                    .HasColumnName("gateOutCell");
+                entity.Property(e => e.CheckBarcode).HasColumnName("checkBarcode");
 
                 entity.Property(e => e.No)
                     .HasColumnType("numeric(18, 0)")
                     .HasColumnName("no");
-
-                entity.Property(e => e.RotateCell)
-                    .HasMaxLength(50)
-                    .HasColumnName("rotateCell");
-
-                entity.Property(e => e.RotateDegree)
-                    .HasMaxLength(50)
-                    .HasColumnName("rotateDegree");
-
-                entity.Property(e => e.RotateDest)
-                    .HasMaxLength(50)
-                    .HasColumnName("rotateDest");
             });
 
             modelBuilder.Entity<MesTaskDetail>(entity =>
@@ -243,6 +217,8 @@ namespace AGVServer.EFModels
                 entity.Property(e => e.Ip)
                     .HasMaxLength(50)
                     .HasColumnName("ip");
+
+                entity.Property(e => e.CheckBarcode).HasColumnName("checkBarcode");
 
                 entity.Property(e => e.Enabled).HasColumnName("enabled");
 

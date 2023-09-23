@@ -12,6 +12,7 @@ namespace AGVServer.EFModels
         public string Type { get; set; } = null!;
         public string Plctype { get; set; } = null!;
         public decimal ModbusStartAddress { get; set; }
+        public bool CheckBarcode { get; set; }
         public bool Enabled { get; set; }
     }
 }
