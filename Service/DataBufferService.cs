@@ -214,32 +214,40 @@ namespace AGVServer.Service
             var responseStr = await res.Content.ReadAsStringAsync();
             try
             {
-                //Dictionary<string, (TaskStatus, string)> tmp = new();
-                List<FlowTaskStatus> tmp = new();
-                var response = JObject.Parse(responseStr);
-                var swarmDatas = (JArray)response["swarm_data"];
-                foreach (var swarmData in swarmDatas)
+				var response = JObject.Parse(responseStr);
+				int system_status_code = (int)response["system_status_code"];
+                if (system_status_code == 5550000)
                 {
-                    string flowID = (string)swarmData["flow_id"];
-                    var tasks = (JArray)swarmData["tasks"];
-                    //only one task
-                    var taskParameter = tasks[0];
-                    //foreach (var taskParameter in tasks)
-                    //{
-                    string amrid = (string)taskParameter["robot_id"];
-                    int state = (int)taskParameter["state"];
-                    string stateMsg = (string)taskParameter["status_msg"];
-                    int percentage = (int)taskParameter["complete_percent"];
-                    var custom_msg = taskParameter["customized_info"];
-                    string report = (string)custom_msg["Report"];
-                    FlowTaskStatus flowTaskStatus = new FlowTaskStatus { flowid = flowID, amrid = amrid, state = state, status_msg = stateMsg, percentage = percentage, custom_info = report };
-                    OnSingleFlowTaskStatus(flowTaskStatus);
-                    tmp.Add(flowTaskStatus);
-                    //}
+                    List<FlowTaskStatus> tmp = new();
+                    var swarmDatas = (JArray)response["swarm_data"];
+                    foreach (var swarmData in swarmDatas)
+                    {
+                        string flowID = (string)swarmData["flow_id"];
+                        var tasks = (JArray)swarmData["tasks"];
+                        //only one task
+                        var taskParameter = tasks[0];
+                        //foreach (var taskParameter in tasks)
+                        //{
+                        string amrid = (string)taskParameter["robot_id"];
+                        int state = (int)taskParameter["state"];
+                        string stateMsg = (string)taskParameter["status_msg"];
+                        int percentage = (int)taskParameter["complete_percent"];
+                        var custom_msg = taskParameter["customized_info"];
+                        string report = (string)custom_msg["Report"];
+                        FlowTaskStatus flowTaskStatus = new FlowTaskStatus { flowid = flowID, amrid = amrid, state = state, status_msg = stateMsg, percentage = percentage, custom_info = report };
+                        OnSingleFlowTaskStatus(flowTaskStatus);
+                        tmp.Add(flowTaskStatus);
+                        //}
 
+                    }
+                    swarmCoreTaskStatus = tmp;
+                    OnAllFlowTaskStatus(swarmCoreTaskStatus);
                 }
-                swarmCoreTaskStatus = tmp;
-                OnAllFlowTaskStatus(swarmCoreTaskStatus);
+                else
+                {
+					Log.Warning("update swarm core task fail( " + system_status_code + ")");
+				}
+				
 			}
             catch (Exception e)
             {
@@ -290,7 +298,7 @@ namespace AGVServer.Service
                             if (flowStatus.status_msg.Contains("barcode not matched"))
                             {
                                 res = true;
-                                resStr = flowStatus.status_msg.Split(':').Last().Trim();
+                                resStr = flowStatus.status_msg.Split(':').Last().Trim().Substring(0, 12);
                             }
                             else
                             {
@@ -2057,6 +2065,10 @@ namespace AGVServer.Service
                         if (swarmCoreTaskStatus.Any(x => x.flowid == mesTask_WIP.TaskNoFromSwarmCore && x.state != mesTask_WIP.Status))
                         {
                             FlowTaskStatus mesTaskState = swarmCoreTaskStatus.FirstOrDefault(x => x.flowid == mesTask_WIP.TaskNoFromSwarmCore);
+                            if (mesTask_WIP.Status !=3 && mesTaskState.state ==3)
+                            {
+                                Log.Information(mesTask_WIP.TaskNoFromMes + " fail("+ mesTaskState.status_msg + ")");
+                            }
                             mesTask_WIP.Status = mesTaskState.state;
                             switch (mesTaskState.state)
                             {
