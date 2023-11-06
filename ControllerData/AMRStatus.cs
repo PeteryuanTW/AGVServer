@@ -21,12 +21,12 @@ namespace AGVServer.Data
 		public int mode { get; set; }
 		[Required]
 		public int battery_percent { get; set; }
-		[Required]
-		public double position_x { get; set; }
-		[Required]
-		public double position_y { get; set; }
-		[Required]
-		public double position_yaw { get; set; }
+		//[Required]
+		//public double position_x { get; set; }
+		//[Required]
+		//public double position_y { get; set; }
+		//[Required]
+		//public double position_yaw { get; set; }
 		[Required]
 		public DateTime last_update_time { get; set; }
 
@@ -40,9 +40,9 @@ namespace AGVServer.Data
 			task_id = robot.task_id;
 			mode = robot.mode;
 			battery_percent = (int)Math.Round(robot.battery_percent);
-			position_x = Math.Round(robot.location.x, 3);
-			position_y = Math.Round(robot.location.y, 3);
-			position_yaw = Math.Round(robot.location.yaw, 3);
+			//position_x = Math.Round(robot.location.x, 3);
+			//position_y = Math.Round(robot.location.y, 3);
+			//position_yaw = Math.Round(robot.location.yaw, 3);
 		}
 	}
 }

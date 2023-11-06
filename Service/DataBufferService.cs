@@ -196,9 +196,10 @@ namespace AGVServer.Service
             }
             catch (Exception e)
             {
-                Console.WriteLine("update swarm core data fail  at " + baseURL + "(" + e.Message + ")");
-                await UpdateToken();
-                Console.WriteLine("retry get token by amr status");
+                //Console.WriteLine("update swarm core data fail  at " + baseURL + "(" + e.Message + ")");
+                Log.Warning("update swarm core amr data fail  at " + baseURL + "(" + e.Message + ")");
+                //await UpdateToken();
+                //Console.WriteLine("retry get token by amr status");
             }
 
         }
@@ -251,10 +252,11 @@ namespace AGVServer.Service
 			}
             catch (Exception e)
             {
-                Console.WriteLine("update swarm core task fail  at " + baseURL + ":" + postfix);
-                await UpdateToken();
-                Console.WriteLine("retry get token by task status");
-            }
+				Log.Warning("update swarm core task fail  at " + baseURL + "(" + e.Message + ")");
+				//Console.WriteLine("update swarm core task fail  at " + baseURL + ":" + postfix);
+				//await UpdateToken();
+				//Console.WriteLine("retry get token by task status");
+			}
         }
 
         public (bool, string) GetMZYByMesNo(string mesNo)
