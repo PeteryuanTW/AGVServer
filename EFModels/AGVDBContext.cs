@@ -153,6 +153,10 @@ namespace AGVServer.EFModels
 
                 entity.Property(e => e.Barcode).HasMaxLength(50);
 
+                entity.Property(e => e.CustomInfo)
+                    .HasMaxLength(50)
+                    .HasColumnName("customInfo");
+
                 entity.Property(e => e.FailTime).HasMaxLength(50);
 
                 entity.Property(e => e.FinishOrTimeoutTime).HasMaxLength(50);
@@ -162,6 +166,8 @@ namespace AGVServer.EFModels
                 entity.Property(e => e.FromStation).HasMaxLength(50);
 
                 entity.Property(e => e.GetFromMesTime).HasMaxLength(50);
+
+                entity.Property(e => e.LastLog).HasMaxLength(50);
 
                 entity.Property(e => e.LoaderToAmrhighOrLow).HasColumnName("LoaderToAMRHighOrLow");
 

@@ -154,7 +154,7 @@ namespace AGVServer.Controllers
         [Route("[action]/{TaskID}")]
         public async Task<ActionResult> CalcelTask([FromRoute] string TaskID)
         {
-            (bool, string) res =  await dataBufferService.CancelWIPTask(TaskID);
+            (bool, string) res =  await dataBufferService.CancelWIPTask(TaskID, "from api");
             if (res.Item1)
             {
                 return Ok(res.Item2);

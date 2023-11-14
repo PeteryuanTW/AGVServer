@@ -220,20 +220,32 @@
 @if (selectedTask != null)
 {
 	<DxPopup @bind-Visible="@deleteDialogueShow" HeaderText="Remove WIP" ShowFooter="true">
-		<BodyContentTemplate>
-			@if (flowDetail != null)
-			{
-				<div>Sure about delete @selectedTask.TaskNoFromMes when @((DataBufferService.TaskStatus)selectedTask.Status) - @flowDetail.custom_info @dataBufferService.GetTaskErrorCode(selectedTask.TaskNoFromMes)?</div>
-			}
-			else
-			{
-				<div>task status is async with swarmcore, please use force delete</div>
-			}
+		<BodyContentTemplate Context="PopupContext">
+			<DxFormLayout>
+				@if (flowDetail != null)
+				{
+					<DxFormLayoutItem Caption=" " BeginRow=true ColSpanMd="12">
+						<div>Sure about delete @selectedTask.TaskNoFromMes when @((DataBufferService.TaskStatus)selectedTask.Status) - @flowDetail.custom_info @dataBufferService.GetTaskErrorCode(selectedTask.TaskNoFromMes)?</div>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem Caption="Last Log" BeginRow=true ColSpanMd="12">
+						<DxTextBox Text="@selectedTask.LastLog" Enabled="false"></DxTextBox>
+					</DxFormLayoutItem>
+					<DxFormLayoutItem Caption="Custom Field" BeginRow=true ColSpanMd="12">
+						<DxTextBox @bind-Text="@customField" ></DxTextBox>
+					</DxFormLayoutItem>
+				}
+				else
+				{
+					<DxFormLayoutItem Caption=" " BeginRow=true ColSpanMd="12">
+						<div>task status is async with swarmcore, please use force delete</div>
+					</DxFormLayoutItem>
+				}
+			</DxFormLayout>
 		</BodyContentTemplate>
 		<FooterContentTemplate>
 			@if (flowDetail != null)
 			{
-				<DxButton Enabled="@(!sending)" RenderStyle="ButtonRenderStyle.Danger" Click="(async ()=> {await CancelTask(selectedTask);sending = false;deleteDialogueShow = false;})" Context="btn_context">
+				<DxButton Enabled="@(!sending)" RenderStyle="ButtonRenderStyle.Danger" Click="(async ()=> {await CancelTask(selectedTask, customField);sending = false;deleteDialogueShow = false;})" Context="btn_context">
 					<div>
 						<DxWaitIndicator Visible="@sending" />
 						<span>@btnText</span>
@@ -322,6 +334,7 @@
 
 @if (selectedTask != null)
 {
+	//customField = "";
 	<DxPopup @bind-Visible="@forceDeleteDialogueShow" HeaderText="Force Delete" ShowFooter="true" CloseOnOutsideClick="false">
 		<BodyContentTemplate Context="PopupContext">
 			<DxFormLayout>
@@ -331,10 +344,13 @@
 				<DxFormLayoutItem Caption="Password" BeginRow=true ColSpanMd="12">
 					<DxTextBox NullText="p@ssw0rd" @bind-Text="@forceDeletepwd"></DxTextBox>
 				</DxFormLayoutItem>
+				<DxFormLayoutItem Caption="Custom Field" BeginRow=true ColSpanMd="12">
+					<DxTextBox @bind-Text="@customField"></DxTextBox>
+				</DxFormLayoutItem>
 			</DxFormLayout>
 		</BodyContentTemplate>
 		<FooterContentTemplate>
-			<DxButton Enabled="@(!forceSending)" RenderStyle="ButtonRenderStyle.Primary" Click="(async ()=>{await ForceDelete(selectedTask);})" Context="newBtn_context">
+			<DxButton Enabled="@(!forceSending)" RenderStyle="ButtonRenderStyle.Primary" Click="(async ()=>{await ForceDelete(selectedTask, customField);})" Context="newBtn_context">
 				<div>
 					<DxWaitIndicator Visible="@forceSending" />
 					<span>@forceBtnText</span>
@@ -408,6 +424,8 @@
 	private string to_rev;
 	private bool toHigh_rev;
 	private string barcode_rev;
+
+	private string customField = "";
 
 
 	protected override Task OnInitializedAsync()
@@ -537,6 +555,7 @@
 					targetTask.AssignToSwarmCoreTime = task.AssignToSwarmCoreTime;
 					targetTask.SwarmCoreActualStratTime = task.SwarmCoreActualStratTime;
 					targetTask.FailTime = task.FailTime;
+					targetTask.LastLog = task.LastLog;
 					//StateHasChanged();
 				});
 			}
@@ -551,14 +570,16 @@
 
 	}
 
-	private async Task CancelTask(MesTaskDetail task)
+	private async Task CancelTask(MesTaskDetail task, string customInfo)
 	{
-		(bool, string) res = await dataBufferService.CancelWIPTask(task.TaskNoFromMes);
+		customInfo = customInfo == null ? "" : customInfo;
+		(bool, string) res = await dataBufferService.CancelWIPTask(task.TaskNoFromMes, customInfo);
 		if (res.Item1)
 		{
 			mesTasks.Remove(task);
 			//GetStastic();
 			await RedirectSelectTask();
+			customField = "";
 			uiService.ShowPopup(PPopupType.Success, "cancel when " + res.Item2);
 		}
 		else
@@ -675,11 +696,11 @@
 		}
 	}
 
-	private async Task ForceDelete(MesTaskDetail task)
+	private async Task ForceDelete(MesTaskDetail task, string customField)
 	{
 		if (forceDeletepwd != null && forceDeletepwd == "p@ssw0rd")
 		{
-			var res = await dataBufferService.ForceCancelWIPTask(task.TaskNoFromMes);
+			var res = await dataBufferService.ForceCancelWIPTask(task.TaskNoFromMes, customField);
 
 			if (res.Item1)
 			{

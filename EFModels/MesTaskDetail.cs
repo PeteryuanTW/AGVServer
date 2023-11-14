@@ -22,5 +22,7 @@ namespace AGVServer.EFModels
         public string FailTime { get; set; } = null!;
         public string FinishOrTimeoutTime { get; set; } = null!;
         public string FinishReason { get; set; } = null!;
+        public string LastLog { get; set; } = null!;
+        public string CustomInfo { get; set; } = null!;
     }
 }
