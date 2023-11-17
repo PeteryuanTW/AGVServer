@@ -167,8 +167,6 @@ namespace AGVServer.EFModels
 
                 entity.Property(e => e.GetFromMesTime).HasMaxLength(50);
 
-                entity.Property(e => e.LastLog).HasMaxLength(50);
-
                 entity.Property(e => e.LoaderToAmrhighOrLow).HasColumnName("LoaderToAMRHighOrLow");
 
                 entity.Property(e => e.SwarmCoreActualStratTime).HasMaxLength(50);

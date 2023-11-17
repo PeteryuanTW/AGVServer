@@ -213,9 +213,10 @@ namespace AGVServer.Service
 			string postfix = "/v2/flows/status";
 			var res = await httpClient_swarmCore.GetAsync(baseURL + postfix);
 			var responseStr = await res.Content.ReadAsStringAsync();
-			Console.WriteLine(responseStr);
-			try
+			//Console.WriteLine(responseStr);
+			if (res.StatusCode == System.Net.HttpStatusCode.OK)
 			{
+
 				var response = JObject.Parse(responseStr);
 				int system_status_code = (int)response["system_status_code"];
 				if (system_status_code == 5550000)
@@ -224,21 +225,33 @@ namespace AGVServer.Service
 					var swarmDatas = (JArray)response["swarm_data"];
 					foreach (var swarmData in swarmDatas)
 					{
-						string flowID = (string)swarmData["flow_id"];
-						var tasks = (JArray)swarmData["tasks"];
-						//only one task
-						var taskParameter = tasks[0];
-						//foreach (var taskParameter in tasks)
-						//{
-						string amrid = (string)taskParameter["robot_id"];
-						int state = (int)taskParameter["state"];
-						string stateMsg = (string)taskParameter["status_msg"];
-						int percentage = (int)taskParameter["complete_percent"];
-						var custom_msg = taskParameter["customized_info"];
-						string report = (string)custom_msg["Report"];
-						FlowTaskStatus flowTaskStatus = new FlowTaskStatus { flowid = flowID, amrid = amrid, state = state, status_msg = stateMsg, percentage = percentage, custom_info = report };
-						OnSingleFlowTaskStatus(flowTaskStatus);
-						tmp.Add(flowTaskStatus);
+						try
+						{
+							string flowID = (string)swarmData["flow_id"];
+							var tasks = (JArray)swarmData["tasks"];
+
+							//only one task
+							var taskParameter = tasks.FirstOrDefault();
+							//foreach (var taskParameter in tasks)
+							//{
+							if (taskParameter != null)
+							{
+								string amrid = (string)taskParameter["robot_id"];
+								int state = (int)taskParameter["state"];
+								string stateMsg = (string)taskParameter["status_msg"];
+								int percentage = (int)taskParameter["complete_percent"];
+								var custom_msg = taskParameter["customized_info"];
+								string report = (string)custom_msg["Report"];
+								FlowTaskStatus flowTaskStatus = new FlowTaskStatus { flowid = flowID, amrid = amrid, state = state, status_msg = stateMsg, percentage = percentage, custom_info = report };
+								OnSingleFlowTaskStatus(flowTaskStatus);
+								//Log.Information("update task " + flowID);
+								tmp.Add(flowTaskStatus);
+							}
+						}
+						catch (Exception e)
+						{
+							Log.Warning("update swarm core task fail( " + e.Message + e.StackTrace + ")");
+						}
 						//}
 
 					}
@@ -248,15 +261,15 @@ namespace AGVServer.Service
 				else
 				{
 					Log.Warning("update swarm core task fail( " + system_status_code + ")");
+
 				}
 
+
+
 			}
-			catch (Exception e)
+			else
 			{
-				Log.Warning("update swarm core task fail  at " + baseURL + "(" + e.Message + ")");
-				//Console.WriteLine("update swarm core task fail  at " + baseURL + ":" + postfix);
-				//await UpdateToken();
-				//Console.WriteLine("retry get token by task status");
+				Log.Warning(res.StatusCode.ToString());
 			}
 		}
 
@@ -444,7 +457,7 @@ namespace AGVServer.Service
 			do
 			{
 				plcClasses = new();
-				Log.Information("config " + plcconfigs.Count());
+				//Log.Information("config " + plcconfigs.Count());
 				//await Task.Run(async () =>
 				//{
 				//Parallel.ForEach(plcconfigs, async plcconfig =>
@@ -483,6 +496,10 @@ namespace AGVServer.Service
 					}));
 				}
 				await Task.WhenAll(connectTask);
+				if (plcClasses.Count != plcconfigs.Count())
+				{
+					Log.Warning("config: " + plcconfigs.Count() + ", " + "class: " + plcClasses.Count);
+				}
 				//Log.Information("init " + plcClasses.Count());
 				//await Task.Delay(100);
 				//});
@@ -1223,7 +1240,7 @@ namespace AGVServer.Service
 						{
 							return (false, "check manual station config");
 						}
-						if (start.name.Contains("STCL"))
+						if (startPointStr.Contains("STCL"))
 						{
 							return (false, "can't start from STCL");
 						}
@@ -2103,11 +2120,12 @@ namespace AGVServer.Service
 						if (swarmCoreTaskStatus.Any(x => x.flowid == mesTask_WIP.TaskNoFromSwarmCore && x.state != mesTask_WIP.Status))
 						{
 							FlowTaskStatus mesTaskState = swarmCoreTaskStatus.FirstOrDefault(x => x.flowid == mesTask_WIP.TaskNoFromSwarmCore);
-							//                    if (mesTask_WIP.Status !=3 && mesTaskState.state ==3)
-							//                    {
-							//                        mesTask_WIP.LastLog = mesTaskState.status_msg;
-							//Log.Information(mesTask_WIP.TaskNoFromMes + " fail("+ mesTaskState.status_msg + ")");
-							//                    }
+							if (mesTask_WIP.Status != 3 && mesTaskState.state == 3)
+							{
+								//mesTask_WIP.LastLog = mesTaskState.status_msg;
+								Log.Information(mesTask_WIP.TaskNoFromMes + " fail(" + mesTaskState.status_msg + ")");
+							}
+							Log.Information(mesTask_WIP.TaskNoFromMes + ":"+ mesTask_WIP.Status+"->"+ mesTaskState.state);
 							mesTask_WIP.Status = mesTaskState.state;
 							switch (mesTaskState.state)
 							{
@@ -2133,6 +2151,7 @@ namespace AGVServer.Service
 								default:
 									break;
 							}
+							
 							OnSingleMesTaskChange(mesTask_WIP);
 						}
 					}

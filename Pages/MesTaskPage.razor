@@ -437,6 +437,7 @@
 		dataBufferService.SingleFlowTaskStatusChangeAct += GetFlowDetail;
 		dataBufferService.AllFlowTaskStatusChangeAct += CheckFlowExist;
 		InitNewTaskParameter();
+		GetStastic();
 		fromEnable = true;
 		return base.OnInitializedAsync();
 	}
@@ -544,8 +545,10 @@
 		//update mes task  status (active & pause & fail) assigned to swarm core
 		else
 		{
+			Log.Information("UI " + task.Status);
 			if (mesTasks.Exists(x => x.TaskNoFromMes == task.TaskNoFromMes))
 			{
+				Log.Information("UI " + task.TaskNoFromMes);
 				InvokeAsync(() =>
 				{
 					MesTaskDetail targetTask = mesTasks.FirstOrDefault(x => x.TaskNoFromMes == task.TaskNoFromMes);
