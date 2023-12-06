@@ -414,6 +414,51 @@ namespace AGVServer.Service
 				});
 			}
 		}
+		public async Task<(bool, string)> ResetModbusValue(string plcName, bool LoaderToAMR, bool top)
+		{
+			PLCClass target = plcClasses.FirstOrDefault(x => x.name.Contains(plcName) && x.tcpConnect == true);
+			if (target != null)
+			{
+				return (false, plcName + " doesn't exist or not connected");
+			}
+			string cat = "";
+			if (top)
+			{
+				cat += "top";
+			}
+			else
+			{
+				cat += "buttom";
+			}
+			if (LoaderToAMR)
+			{
+				cat += "-out";
+			}
+			else
+			{
+				cat += "-in";
+
+			}
+			List<PLCValueTable> valueTables = target.valueTables;
+			if (valueTables == null || valueTables.Count == 0)
+			{
+				return (false, "plc point table is null");
+			}
+			else
+			{
+				await Task.Run(async () =>
+				{
+					foreach (PLCValueTable item in valueTables)
+					{
+						if (!item.updateType && item.category == cat)
+						{
+							await master.WriteSingleCoilAsync(1, item.modbusIndex, false);
+						}
+					}
+				});
+				return (true, "reset " + plcName + " " + cat + " category points success");
+			}
+		}
 
 		#endregion
 
@@ -803,6 +848,22 @@ namespace AGVServer.Service
 					//active & pause
 					else if (target.Status == 1 || target.Status == 4 || target.Status == 3)
 					{
+						if (targetFlow.custom_info.Contains("handshake1"))
+						{
+							(bool, string) res_resetPLC = await ResetModbusValue(target.FromStation, true, target.LoaderToAmrhighOrLow);
+							if (!res_resetPLC.Item1)
+							{
+								return (false, res_resetPLC.Item2);
+							}
+						}
+						if (targetFlow.custom_info.Contains("handshake2"))
+						{
+							(bool, string) res_resetPLC = await ResetModbusValue(target.ToStation, false, target.AmrtoLoaderHighOrLow);
+							if (!res_resetPLC.Item1)
+							{
+								return (false, res_resetPLC.Item2);
+							}
+						}
 						(bool, string) res = await DeleteTaskFromSwarmCore(target);
 						if (res.Item1)
 						{
@@ -810,26 +871,42 @@ namespace AGVServer.Service
 							reason += ("-" + targetFlow.custom_info);
 							reason += ("(" + GetTaskErrorCode(tasknoFromMes) + ")");
 							string msg = "";
-							switch (targetFlow.custom_info)
+							if (targetFlow.custom_info.Contains("moving1") || targetFlow.custom_info.Contains("docking1") || targetFlow.custom_info.Contains("moving3"))
 							{
-								case "moving1":
-								case "docking1":
-								case "moving3":
-									msg = "please check AMR";
-									break;
-								case "handshake1":
-								case "handshake2":
-									msg = "please reset AMR, loader and remove magazine from AMR";
-									break;
-								case "barcodecheck1":
-								case "moving2":
-								case "docking2":
-								case "barcodecheck2":
-									msg = "please remove magazine from AMR";
-									break;
-								default:
-									break;
+								msg = "please check AMR";
 							}
+							else if (targetFlow.custom_info.Contains("handshake"))
+							{
+								msg = "please reset AMR, loader and remove magazine from AMR";
+							}
+							else if (targetFlow.custom_info.Contains("barcodecheck") || targetFlow.custom_info.Contains("moving2") || targetFlow.custom_info.Contains("docking2"))
+							{
+								msg = "please remove magazine from AMR";
+							}
+							else
+							{
+								msg = "hint message unknown";
+							}
+							//switch (targetFlow.custom_info)
+							//{
+							//	case "moving1":
+							//	case "docking1":
+							//	case "moving3":
+							//		msg = "please check AMR";
+							//		break;
+							//	case "handshake1":
+							//	case "handshake2":
+							//		msg = "please reset AMR, loader and remove magazine from AMR";
+							//		break;
+							//	case "barcodecheck1":
+							//	case "moving2":
+							//	case "docking2":
+							//	case "barcodecheck2":
+							//		msg = "please remove magazine from AMR";
+							//		break;
+							//	default:
+							//		break;
+							//}
 							await RemoveFromWIP(target, reason, target.LastLog, custonField);
 							MesTasks_WIP.Remove(target);
 							OnMesTaskCancel(target);

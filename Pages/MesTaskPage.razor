@@ -315,7 +315,7 @@
 				<DxTextBox @bind-Text="@barcode_rev" Enabled="true"></DxTextBox>
 			</DxFormLayoutItem>
 			<DxFormLayoutItem Caption="To:" BeginRow=true ColSpanMd="12">
-				<DxComboBox Data="@toList" Value="@to_rev"></DxComboBox>
+				<DxComboBox Data="@toList" Value="@to_rev" ValueChanged="((string s)=>{ReverseToChanged(s);})"></DxComboBox>
 			</DxFormLayoutItem>
 			<DxFormLayoutItem Caption="To High:" BeginRow=true ColSpanMd="12">
 				<DxCheckBox @bind-Checked="@toHigh_rev" CheckType="CheckType.Switch"></DxCheckBox>
@@ -697,6 +697,11 @@
 		{
 			uiService.ShowPopup(PPopupType.Dangerous, res.Item2);
 		}
+	}
+
+	private void ReverseToChanged(string s)
+	{
+		to_rev = s;
 	}
 
 	private async Task ForceDelete(MesTaskDetail task, string customField)
