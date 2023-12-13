@@ -417,7 +417,7 @@ namespace AGVServer.Service
 		public async Task<(bool, string)> ResetModbusValue(string plcName, bool LoaderToAMR, bool top)
 		{
 			PLCClass target = plcClasses.FirstOrDefault(x => x.name.Contains(plcName) && x.tcpConnect == true);
-			if (target != null)
+			if (target == null)
 			{
 				return (false, plcName + " doesn't exist or not connected");
 			}
@@ -428,7 +428,7 @@ namespace AGVServer.Service
 			}
 			else
 			{
-				cat += "buttom";
+				cat += "but";
 			}
 			if (LoaderToAMR)
 			{
