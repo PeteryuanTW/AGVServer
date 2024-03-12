@@ -31,6 +31,12 @@ namespace AGVServer.Controllers
             return Ok(dataBufferService.GetAllTasks());
         }
         [HttpGet]
+        [Route("[action]")]
+        public ActionResult<List<MesTaskDetail>> GetWIP()
+        {
+            return Ok(dataBufferService.GetWIPTasks());
+        }
+        [HttpGet]
         [Route("[action]/{TaskID}")]
         public ActionResult<MesTaskDetail> GetTaskByID([FromRoute] string TaskID)
         {

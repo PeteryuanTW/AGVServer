@@ -153,9 +153,7 @@ namespace AGVServer.EFModels
 
                 entity.Property(e => e.Barcode).HasMaxLength(50);
 
-                entity.Property(e => e.CustomInfo)
-                    .HasMaxLength(50)
-                    .HasColumnName("customInfo");
+                entity.Property(e => e.CustomInfo).HasColumnName("customInfo");
 
                 entity.Property(e => e.FailTime).HasMaxLength(50);
 
