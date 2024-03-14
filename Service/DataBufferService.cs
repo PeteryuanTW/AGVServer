@@ -208,7 +208,31 @@ namespace AGVServer.Service
 		{
 			return swarmCoreTaskStatus;
 		}
-		public async Task UpdateSwarmCoreTaskStatus()
+
+        public FlowTaskStatus? GetSwarmCoreTaskStatusByMesNo(string mesNo)
+        {
+            MesTaskDetail target = MesTasks_WIP.FirstOrDefault(x => x.TaskNoFromMes == mesNo);
+			if (target != null)
+			{
+				string taskNo = target.TaskNoFromSwarmCore;
+				FlowTaskStatus flowTaskStatus = swarmCoreTaskStatus.FirstOrDefault(x => x.flowid == taskNo);
+				if (flowTaskStatus != null)
+				{
+					return flowTaskStatus;
+				}
+				else
+				{
+					return null;
+				}
+
+			}
+			else
+			{
+				return null;
+			}
+        }
+
+        public async Task UpdateSwarmCoreTaskStatus()
 		{
 			string postfix = "/v2/flows/status";
 			var res = await httpClient_swarmCore.GetAsync(baseURL + postfix);

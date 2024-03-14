@@ -36,14 +36,39 @@ namespace AGVServer.Controllers
         {
             return Ok(dataBufferService.GetWIPTasks());
         }
+        
+        //[HttpGet]
+        //[Route("[action]/{TaskID}")]
+        //public ActionResult<MesTaskDetail> GetTaskByID([FromRoute] string TaskID)
+        //{
+        //    MesTaskDetail res = dataBufferService.GetAllTasks().FirstOrDefault(x => x.TaskNoFromMes == TaskID);
+        //    if (res != null)
+        //    {
+        //        return Ok(res);
+        //    }
+        //    else
+        //    {
+        //        return Ok(null);
+        //    }
+
+        //}
+        
+        [HttpGet]
+        [Route("[action]")]
+        public ActionResult<List<FlowTaskStatus>> GetAllTasksDetail()
+        {
+            List<FlowTaskStatus> res = dataBufferService.GetSwarmCoreTaskStatus();
+            return Ok(res);
+        }
+
         [HttpGet]
         [Route("[action]/{TaskID}")]
-        public ActionResult<MesTaskDetail> GetTaskByID([FromRoute] string TaskID)
+        public ActionResult<FlowTaskStatus> GetTaskDetailByMesNo([FromRoute] string TaskID)
         {
-            MesTaskDetail res = dataBufferService.GetAllTasks().FirstOrDefault(x => x.TaskNoFromMes == TaskID);
+            FlowTaskStatus res = dataBufferService.GetSwarmCoreTaskStatusByMesNo(TaskID);
             if (res != null)
             {
-                return Ok(res);
+                return NotFound();
             }
             else
             {
@@ -51,6 +76,7 @@ namespace AGVServer.Controllers
             }
 
         }
+
         [HttpGet]
         [Route("[action]/{TaskID}")]
         public ActionResult<string> GetBarcode([FromRoute] string TaskID)
